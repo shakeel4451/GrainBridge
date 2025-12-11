@@ -260,3 +260,77 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+/* --- AI Image Upload Styles --- */
+
+.upload-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  border: 2px dashed #8c734b; /* Gold dashed border */
+  border-radius: 10px;
+  color: #8c734b;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.upload-label:hover {
+  background-color: #fff8e1; /* Light yellow background on hover */
+}
+
+.file-preview {
+  margin-top: 15px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f9f9f9;
+  width: 100%;
+}
+
+.file-preview p {
+  font-size: 14px;
+  margin: 5px 0;
+  font-weight: 500;
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  color: #d32f2f;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 5px auto 0;
+}
+
+/* --- Analysis Results Styles --- */
+
+.results-card {
+  background-color: #f7fff7; /* Very light green background */
+}
+
+.result-box {
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.result-box h4 {
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}

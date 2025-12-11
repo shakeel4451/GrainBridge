@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import SupplierSidebar from "../components/SupplierSidebar";
 import "./SupplierDashboard.css"; // Reusing dashboard styles
+// FIX: FaBank has been correctly replaced with FaUniversity in the import
 import {
   FaUserCircle,
   FaEdit,
@@ -111,18 +112,22 @@ const SupplierProfile = () => {
             Payment Information
           </h3>
           <div className="profile-grid">
+            {/* FIX: Ensure FaUniversity is used here */}
             <InputField
               label="Bank Name"
               name="bankName"
               value={profile.bankName}
-              icon={<FaBank />}
+              icon={<FaUniversity />}
             />
+
+            {/* FIX: Ensure FaUniversity is used here */}
             <InputField
               label="Account Number"
               name="accountNumber"
               value={profile.accountNumber}
-              icon={<FaBank />}
+              icon={<FaUniversity />}
             />
+
             <InputField
               label="Phone (for alerts)"
               name="phone"

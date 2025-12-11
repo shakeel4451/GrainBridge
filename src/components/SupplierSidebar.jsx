@@ -46,10 +46,10 @@ const SupplierSidebar = () => {
           </Link>
         </li>
 
-        {/* Quality Reports Link */}
-        <li className={isLinkActive("/supplier/quality") ? "active" : ""}>
-          <Link to="/supplier/quality">
-            <FaSeedling /> Quality Reports
+        {/* AI Scanner Link */}
+        <li className={isLinkActive("/supplier/quality-ai") ? "active" : ""}>
+          <Link to="/supplier/quality-ai">
+            <FaSeedling /> Quality Scanner (AI)
           </Link>
         </li>
 

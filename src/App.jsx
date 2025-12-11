@@ -15,7 +15,7 @@ import SupplierDashboard from "./pages/SupplierDashboard";
 // Supplier Subpages
 import SupplierPayments from "./pages/SupplierPayments";
 import SupplierDemand from "./pages/SupplierDemand";
-import SupplierQuality from "./pages/SupplierQuality";
+import SupplierAIQuality from "./pages/SupplierAIQuality"; // <-- AI Quality Scanner Import
 import SupplierProfile from "./pages/SupplierProfile";
 import { SupplierSettings } from "./pages/PortalSettings";
 
@@ -32,8 +32,8 @@ import AdminSales from "./pages/AdminSales";
 import AdminMilling from "./pages/AdminMilling";
 import AdminCustomers from "./pages/AdminCustomers";
 import AdminSuppliers from "./pages/AdminSuppliers";
-import { AdminSettings } from "./pages/PortalSettings";
 import AdminReports from "./pages/AdminReports";
+import { AdminSettings } from "./pages/PortalSettings";
 
 // AI Component
 import AiChatbot from "./components/AiChatbot";
@@ -64,7 +64,6 @@ function App() {
           <Route path="/admin/inventory" element={<AdminInventory />} />
           <Route path="/admin/sales" element={<AdminSales />} />
           <Route path="/admin/orders" element={<AdminSales />} />{" "}
-          {/* Orders uses Sales page for now */}
           <Route path="/admin/milling" element={<AdminMilling />} />
           <Route path="/admin/customers" element={<AdminCustomers />} />
           <Route path="/admin/suppliers" element={<AdminSuppliers />} />
@@ -76,7 +75,9 @@ function App() {
           <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
           <Route path="/supplier/payments" element={<SupplierPayments />} />
           <Route path="/supplier/demand" element={<SupplierDemand />} />
-          <Route path="/supplier/quality" element={<SupplierQuality />} />
+          {/* AI Quality Scanner Routes (Both quality/ and quality-ai/ point to the new component) */}
+          <Route path="/supplier/quality" element={<SupplierAIQuality />} />
+          <Route path="/supplier/quality-ai" element={<SupplierAIQuality />} />
           <Route path="/supplier/profile" element={<SupplierProfile />} />
           <Route path="/supplier/settings" element={<SupplierSettings />} />
           {/* ====================================
