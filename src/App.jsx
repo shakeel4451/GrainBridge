@@ -16,6 +16,11 @@ import CustomerHistory from "./pages/CustomerHistory";
 import CustomerTracking from "./pages/CustomerTracking";
 import CustomerTraceability from "./pages/CustomerTraceability";
 import AiChatbot from "./components/AiChatbot";
+import AdminInventory from "./pages/AdminInventory";
+import AdminSales from "./pages/AdminSales";
+import AdminMilling from "./pages/AdminMilling"; // New Page
+import AdminCustomers from "./pages/AdminCustomers"; // New Page
+import AdminSuppliers from "./pages/AdminSuppliers";
 import "./App.css";
 
 function App() {
@@ -27,7 +32,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/products" element={<Products />} />
-
           {/* Add these routes for Login */}
           <Route path="/login" element={<Login />} />
           <Route path="/login/customer" element={<Login />} />
@@ -43,6 +47,16 @@ function App() {
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
           <Route path="/customer/history" element={<CustomerHistory />} />
           <Route path="/customer/tracking" element={<CustomerTracking />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/inventory" element={<AdminInventory />} />
+          <Route path="/admin/sales" element={<AdminSales />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/inventory" element={<AdminInventory />} />
+          <Route path="/admin/sales" element={<AdminSales />} />
+          <Route path="/admin/orders" element={<AdminSales />} />{" "}
+          <Route path="/admin/milling" element={<AdminMilling />} />
+          <Route path="/admin/customers" element={<AdminCustomers />} />
+          <Route path="/admin/suppliers" element={<AdminSuppliers />} />
           <Route
             path="/customer/traceability"
             element={<CustomerTraceability />}
