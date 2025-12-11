@@ -262,3 +262,107 @@
   font-size: 13px;
   color: #777;
 }
+/* --- Generic Form Input Styles --- */
+.input-field-group {
+  margin-bottom: 20px;
+}
+
+.input-field-group label {
+  display: block;
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.input-with-icon {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 5px 10px;
+  background: #fff;
+}
+
+.input-with-icon svg {
+  margin-right: 10px;
+  color: #8c734b; /* Gold icon color */
+}
+
+.input-with-icon input,
+.input-with-icon textarea {
+  flex-grow: 1;
+  border: none;
+  padding: 8px 0;
+  outline: none;
+  font-size: 15px;
+  background: transparent;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.full-width {
+  grid-column: span 2;
+}
+
+/* --- Toggle Switch CSS --- */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+}
+
+input:checked + .slider {
+  background-color: #3e5235; /* Olive Green ON color */
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #3e5235;
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 28px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom"; // <-- Import useLocation
 import "./CustomerSidebar.css";
 import {
   FaThLarge,
@@ -12,6 +12,11 @@ import {
 } from "react-icons/fa";
 
 const CustomerSidebar = () => {
+  const location = useLocation(); // Initialize useLocation
+
+  // Helper function to check if a link path is active or should be highlighted
+  const isLinkActive = (path) => location.pathname.startsWith(path);
+
   return (
     <div className="customer-sidebar">
       <div className="sidebar-header">
@@ -19,37 +24,50 @@ const CustomerSidebar = () => {
       </div>
 
       <ul className="sidebar-menu">
-        <li className="active">
+        {/* Dashboard Link - Match exact path */}
+        <li className={isLinkActive("/customer/dashboard") ? "active" : ""}>
           <Link to="/customer/dashboard">
             <FaThLarge /> Dashboard
           </Link>
         </li>
-        <li>
+
+        {/* Place New Order Link - Note: This links to the public /products page */}
+        <li className={isLinkActive("/products") ? "active" : ""}>
           <Link to="/products">
             <FaShoppingCart /> Place New Order
           </Link>
         </li>
-        <li>
+
+        {/* Order History Link */}
+        <li className={isLinkActive("/customer/history") ? "active" : ""}>
           <Link to="/customer/history">
             <FaHistory /> Order History
           </Link>
         </li>
-        <li>
+
+        {/* Track Shipments Link */}
+        <li className={isLinkActive("/customer/tracking") ? "active" : ""}>
           <Link to="/customer/tracking">
             <FaTruck /> Track Shipments
           </Link>
         </li>
-        <li>
+
+        {/* Traceability Check Link */}
+        <li className={isLinkActive("/customer/traceability") ? "active" : ""}>
           <Link to="/customer/traceability">
             <FaMapMarkerAlt /> Traceability Check
           </Link>
         </li>
-        <li>
+
+        {/* My Profile Link */}
+        <li className={isLinkActive("/customer/profile") ? "active" : ""}>
           <Link to="/customer/profile">
             <FaUserCircle /> My Profile
           </Link>
         </li>
-        <li>
+
+        {/* Settings Link */}
+        <li className={isLinkActive("/customer/settings") ? "active" : ""}>
           <Link to="/customer/settings">
             <FaCog /> Settings
           </Link>
