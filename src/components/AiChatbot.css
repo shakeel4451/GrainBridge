@@ -3,7 +3,7 @@
   position: fixed;
   bottom: 30px; /* Safe distance from the bottom/footer */
   right: 30px;
-  z-index: 9999;
+  z-index: 900;
   font-family: "Segoe UI", sans-serif;
   display: flex;
   flex-direction: column;
@@ -42,9 +42,10 @@
 }
 
 /* Chat Window */
+/* Chat Window */
 .chatbot-window {
   width: 350px;
-  height: 500px;
+  height: 400px; /* REDUCED HEIGHT for better screen fit */
   background: #fff;
   border-radius: 15px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
