@@ -1,0 +1,214 @@
+/* Container holding the background image */
+.login-container {
+  height: 100vh; /* Full screen height */
+  width: 100%;
+  /* Using your hero image for consistency */
+  background-image: url("../assets/hero1.jpg");
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* Dark Overlay to make text readable */
+.login-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(44, 62, 80, 0.6); /* Navy blue tint */
+  backdrop-filter: blur(3px); /* Blur effect on background */
+  z-index: 1;
+}
+
+/* The Glass Card */
+.login-card {
+  position: relative;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.95);
+
+  /* RESPONSIVE WIDTH FIX */
+  width: 90%; /* Take up 90% of screen width */
+  max-width: 420px; /* But never wider than 420px */
+  margin: 20px; /* Add margin for safety on mobile */
+
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: slideUp 0.8s ease-out;
+}
+
+/* Header Animation */
+.login-header {
+  margin-bottom: 30px;
+}
+
+.login-logo {
+  height: 60px;
+  margin-bottom: 15px;
+}
+
+.login-header h2 {
+  color: #3e5235; /* Brand Green */
+  margin-bottom: 5px;
+  font-family: "Segoe UI", sans-serif;
+  font-weight: 700;
+}
+
+.login-header p {
+  color: #777;
+  font-size: 14px;
+}
+
+/* Role Switcher (Tabs) */
+.role-switcher {
+  display: flex;
+  background: #f0f0f0;
+  padding: 5px;
+  border-radius: 30px;
+  margin-bottom: 25px;
+}
+
+.role-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #555;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.role-btn.active {
+  background: #3e5235; /* Active Green */
+  color: white;
+  box-shadow: 0 4px 10px rgba(62, 82, 53, 0.3);
+}
+
+.role-btn:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+/* Input Fields */
+.input-group {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8c734b; /* Gold Icon */
+}
+
+.login-form input {
+  width: 100%;
+  padding: 12px 15px 12px 45px; /* Padding left for icon */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.3s;
+  box-sizing: border-box; /* Fixes width issues */
+}
+
+.login-form input:focus {
+  border-color: #3e5235;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(62, 82, 53, 0.1);
+}
+
+/* Options (Remember Me / Forgot PW) */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 25px;
+}
+
+.forgot-link {
+  color: #8c734b;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #3e5235 0%, #2c3e50 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(62, 82, 53, 0.3);
+}
+
+/* Footer Link */
+.login-footer {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.login-footer a {
+  color: #3e5235;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+/* ANIMATIONS */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 20px; /* Reduce padding on small screens */
+  }
+
+  .role-switcher {
+    flex-wrap: wrap; /* Allow buttons to stack if needed */
+  }
+
+  .role-btn {
+    font-size: 12px; /* Smaller text */
+    padding: 8px;
+  }
+}
+
+.login-form input,
+.role-btn {
+  cursor: pointer;
+  position: relative;
+  z-index: 101;
+}

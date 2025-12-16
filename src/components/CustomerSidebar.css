@@ -1,0 +1,113 @@
+/* Sidebar Container */
+.customer-sidebar {
+  width: 250px;
+  background-color: #fff;
+  border-right: 1px solid #e0e0e0;
+  height: calc(100vh - 80px); /* Full height minus navbar */
+  position: sticky;
+  top: 80px; /* Below navbar */
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease-in-out; /* Smooth slide animation */
+  z-index: 2000; /* Ensure it sits above content */
+}
+
+/* Header */
+.sidebar-header {
+  background-color: #3e5235; /* Olive Green Header */
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-weight: bold;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between; /* To fit close button on mobile */
+  align-items: center;
+}
+
+/* Menu Links */
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu li a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  color: #333;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.sidebar-menu li a:hover {
+  background-color: #f4f4f4;
+  color: #8c734b; /* Gold on hover */
+}
+
+.sidebar-menu li.active a {
+  background-color: #fff8e1; /* Very Light Gold background */
+  color: #8c734b; /* Gold Text */
+  border-left: 4px solid #8c734b; /* Active indicator */
+}
+
+/* Mobile Toggle Button (Hidden on Desktop) */
+.mobile-menu-toggle {
+  display: none;
+}
+
+.close-sidebar-btn {
+  display: none; /* Hidden on Desktop */
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* =========================
+   MOBILE RESPONSIVENESS
+   ========================= */
+@media (max-width: 900px) {
+  .customer-sidebar {
+    position: fixed; /* Float on top */
+    left: 0;
+    top: 0;
+    height: 100vh; /* Full height */
+    transform: translateX(-100%); /* HIDE IT by default */
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+    width: 260px; /* Slightly wider for touch targets */
+    z-index: 2001;
+  }
+
+  .customer-sidebar.open {
+    transform: translateX(0); /* SHOW IT when open */
+  }
+
+  /* Show the toggle button (Hamburger) */
+  .mobile-menu-toggle {
+    display: flex;
+    position: fixed;
+    top: 90px; /* Just below Navbar */
+    left: 10px;
+    z-index: 2000;
+    background-color: #3e5235; /* Olive Green */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  .close-sidebar-btn {
+    display: block; /* Show Close 'X' inside sidebar */
+  }
+}

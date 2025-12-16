@@ -1,0 +1,88 @@
+/* =========================
+   Global Resets
+   ========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fcfcfc; /* Very light grey background to reduce eye strain */
+  color: #333;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =========================
+   App Layout (Sticky Footer)
+   ========================= */
+/* This ensures the Footer always stays at the bottom, even on short pages */
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Forces the app to take full screen height */
+}
+
+/* Make these pages expand to fill empty space */
+.home-container,
+.about-container,
+.products-page,
+.login-container {
+  flex: 1; /* Pushes the footer down */
+}
+
+/* =========================
+   Common Utility Classes
+   ========================= */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+}
+
+/* =========================
+   MOBILE RESPONSIVENESS
+   ========================= */
+
+@media (max-width: 900px) {
+  /* 1. Global Layout: Stack Sidebar and Content */
+  .admin-layout,
+  .customer-layout,
+  .supplier-layout {
+    flex-direction: column;
+    position: relative; /* Needed for absolute positioning of sidebar */
+  }
+
+  /* 2. Dashboards: Stack Widgets Vertically */
+  .dashboard-grid {
+    flex-direction: column !important; /* Force stack */
+  }
+
+  .stats-row {
+    flex-direction: column !important;
+  }
+
+  /* 3. Cards: Remove fixed widths or flex restrictions */
+  .card,
+  .stat-card {
+    width: 100%;
+    margin-bottom: 15px;
+  }
+
+  /* 4. Tables: Make them scrollable horizontally */
+  .card {
+    overflow-x: auto; /* Adds scrollbar if table is too wide */
+  }
+
+  .admin-table,
+  .customer-table,
+  .supplier-table {
+    min-width: 600px; /* Force table to keep shape, user scrolls */
+  }
+}

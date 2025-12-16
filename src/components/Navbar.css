@@ -1,0 +1,168 @@
+/* =========================
+   Navbar Container
+   ========================= */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #3e5235; /* Dark Olive Green */
+  padding: 10px 50px;
+  color: white;
+  border-bottom: 4px solid #8c734b; /* Brown accent line at bottom */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* =========================
+   Brand Section (Logo + Name)
+   ========================= */
+.navbar-brand {
+  display: flex; /* Puts logo and text in a row */
+  align-items: center; /* Vertically centers them perfectly */
+  gap: 12px;
+  text-decoration: none;
+}
+
+.logo-img {
+  height: 50px; /* Final size for the cropped icon */
+  width: auto;
+  object-fit: contain;
+}
+
+.brand-text {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  display: flex;
+}
+
+.text-white {
+  color: #ffffff;
+}
+
+.text-gold {
+  color: #c5a059; /* Muted Gold color */
+}
+
+/* =========================
+   Navigation Links
+   ========================= */
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+}
+
+.navbar-links a {
+  text-decoration: none;
+  color: #f0f0f0;
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.navbar-links a:hover {
+  color: #d4af37; /* Gold color on hover */
+}
+
+/* =========================
+   Login Button (Direct Link)
+   ========================= */
+
+/* The link wrapper for the button */
+.login-link-btn {
+  display: block;
+}
+
+/* The actual button styling */
+.login-btn {
+  background-color: #8c734b; /* Brownish Gold */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 15px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.login-btn:hover {
+  background-color: #7a6340; /* Darker brown on hover */
+  transform: translateY(-1px);
+}
+
+/* =========================
+   Responsive Design
+   ========================= */
+@media (max-width: 900px) {
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 15px 20px;
+  }
+
+  .navbar-links {
+    margin-top: 15px;
+    /* You may want to collapse these into a column for mobile */
+    /* flex-direction: column; align-items: flex-start; gap: 10px; */
+  }
+
+  .navbar-brand {
+    margin-bottom: 5px;
+  }
+}
+
+/* ADMIN SPECIFIC STYLES */
+.admin-info {
+  color: #c5a059; /* Gold accent for user name */
+  font-weight: 600;
+  margin-right: 15px;
+}
+
+.logout-btn {
+  background-color: #d32f2f; /* Red for alert/security */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 15px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logout-btn:hover {
+  background-color: #b71c1c;
+}
+
+/* Add this at the bottom */
+
+@media (max-width: 900px) {
+  .navbar {
+    flex-direction: column;
+    padding: 15px;
+    height: auto; /* Allow it to grow */
+  }
+
+  .navbar-links {
+    margin-top: 15px;
+    flex-wrap: wrap; /* Allow links to wrap to next line */
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .navbar-brand {
+    margin-bottom: 5px;
+  }
+}
