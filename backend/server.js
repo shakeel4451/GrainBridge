@@ -1,12 +1,14 @@
-// backend/server.js
+// backend/server.js (FINAL VERSION)
 
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
-// --- 1. Import Routes ---
+// --- 1. Import all Routes ---
 const authRoutes = require("./routes/authRoutes");
+const productRoutes = require("./routes/productRoutes"); // NEW
+const orderRoutes = require("./routes/orderRoutes"); // NEW
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +31,8 @@ app.get("/", (req, res) => {
 
 // --- 2. Use Routes ---
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes); // NEW
+app.use("/api/orders", orderRoutes); // NEW
 
 // Start the server
 app.listen(PORT, () => {
