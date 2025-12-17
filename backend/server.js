@@ -1,15 +1,20 @@
+// backend/server.js
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config(); // Load environment variables from .env file
+require("dotenv").config();
+
+// --- 1. Import Routes ---
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
 // Middleware
-app.use(express.json()); // Allows us to accept JSON data in the request body
-app.use(cors()); // Enables cross-origin requests
+app.use(express.json());
+app.use(cors());
 
 // Database Connection
 mongoose
@@ -21,6 +26,9 @@ mongoose
 app.get("/", (req, res) => {
   res.send("Rice ERP Backend is running!");
 });
+
+// --- 2. Use Routes ---
+app.use("/api/auth", authRoutes);
 
 // Start the server
 app.listen(PORT, () => {
