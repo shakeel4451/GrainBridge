@@ -1,125 +1,115 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"; // 1. Import useNavigate
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import "./Login.css";
-import {
-  FaUser,
-  FaLock,
-  FaTractor,
-  FaUserShield,
-  FaLeaf,
-} from "react-icons/fa";
-import logo from "../assets/logo.png";
+
+const API_BASE_URL = "http://localhost:5000";
 
 const Login = () => {
-  const [role, setRole] = useState("customer");
-  const [formData, setFormData] = useState({ email: "", password: "" });
-
-  // 2. Initialize the navigate function
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("Admin");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleRoleChange = (selectedRole) => {
-    setRole(selectedRole);
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    if (role === "admin") {
-      navigate("/admin/dashboard");
-    } else if (role === "supplier") {
-      // REDIRECT SUPPLIER HERE
-      navigate("/supplier/dashboard");
-    } else {
-      // Customer
-      navigate("/customer/dashboard"); // Sending customer to their dashboard now
+    try {
+      const { data } = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+        email,
+        password,
+      });
+
+      // --- ROLE VALIDATION LOGIC ---
+      // Compare the toggle selected in UI (role) with the database result (data.role)
+      if (data.role !== role) {
+        setError(
+          `Access Denied: You are registered as a ${data.role}, not an ${role}.`
+        );
+        return; // Halt the login process
+      }
+
+      // Store persistent user info in localStorage
+      localStorage.setItem("userInfo", JSON.stringify(data));
+
+      // Navigate based on verified role
+      if (data.role === "Admin") navigate("/admin/dashboard");
+      else if (data.role === "Customer") navigate("/customer/dashboard");
+      else navigate("/supplier/dashboard");
+    } catch (apiError) {
+      const errorMessage =
+        apiError.response?.data?.message ||
+        "Login failed. Check server connection.";
+      setError(errorMessage);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-overlay"></div>
+    <div className="login-page-wrapper">
       <div className="login-card">
-        <div className="login-header">
-          <img src={logo} alt="GrainBridge" className="login-logo" />
-          <h2>Welcome Back</h2>
-          <p>Please select your portal to continue</p>
+        <h2>ERP Login</h2>
+
+        <div className="role-selector">
+          <button
+            className={role === "Admin" ? "active" : ""}
+            onClick={() => setRole("Admin")}
+            type="button"
+          >
+            Admin
+          </button>
+          <button
+            className={role === "Customer" ? "active" : ""}
+            onClick={() => setRole("Customer")}
+            type="button"
+          >
+            Customer
+          </button>
+          <button
+            className={role === "Supplier" ? "active" : ""}
+            onClick={() => setRole("Supplier")}
+            type="button"
+          >
+            Supplier
+          </button>
         </div>
 
-        {/* Role Switcher */}
-        <div className="role-switcher">
-          <button
-            className={`role-btn ${role === "customer" ? "active" : ""}`}
-            onClick={() => handleRoleChange("customer")}
-          >
-            <FaUser /> Customer
-          </button>
-          <button
-            className={`role-btn ${role === "supplier" ? "active" : ""}`}
-            onClick={() => handleRoleChange("supplier")}
-          >
-            <FaTractor /> Farmer
-          </button>
-          <button
-            className={`role-btn ${role === "admin" ? "active" : ""}`}
-            onClick={() => handleRoleChange("admin")}
-          >
-            <FaUserShield /> Admin
-          </button>
-        </div>
+        <p className="login-prompt-text">
+          Log in as <strong>{role}</strong>
+        </p>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="input-group">
-            <div className="input-icon">
-              {role === "supplier" ? <FaLeaf /> : <FaUser />}
-            </div>
+        {error && <div className="login-error-box">{error}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <div className="login-form-group">
+            <label>Email Address</label>
             <input
-              type={role === "supplier" ? "text" : "email"}
-              placeholder={
-                role === "supplier"
-                  ? "Grower ID / Phone Number"
-                  : "Email Address"
-              }
+              type="email"
+              placeholder="Enter email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
             />
           </div>
-
-          <div className="input-group">
-            <div className="input-icon">
-              <FaLock />
-            </div>
+          <div className="login-form-group">
+            <label>Password</label>
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
             />
           </div>
-
-          <div className="form-options">
-            <label>
-              <input type="checkbox" /> Remember me
-            </label>
-            <a href="#" className="forgot-link">
-              Forgot Password?
-            </a>
-          </div>
-
-          <button type="submit" className="submit-btn">
-            Login as {role.charAt(0).toUpperCase() + role.slice(1)}
+          <button type="submit" className="login-submit-btn">
+            Login
           </button>
         </form>
 
-        <div className="login-footer">
-          <p>
-            New to GrainBridge? <Link to="/register">Create Account</Link>
-          </p>
+        <div className="login-footer-link">
+          Don't have an account?{" "}
+          <span onClick={() => navigate("/register")}>Register</span>
         </div>
       </div>
     </div>

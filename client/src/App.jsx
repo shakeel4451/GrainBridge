@@ -38,6 +38,8 @@ import { AdminSettings } from "./pages/PortalSettings";
 // AI Component
 import AiChatbot from "./components/AiChatbot";
 
+import Register from "./pages/Register";
+
 import "./App.css";
 
 function App() {
@@ -54,6 +56,7 @@ function App() {
           <Route path="/products" element={<Products />} />
           {/* Login Routes (all point to the unified Login component) */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/login/customer" element={<Login />} />
           <Route path="/login/supplier" element={<Login />} />
           <Route path="/login/admin" element={<Login />} />
