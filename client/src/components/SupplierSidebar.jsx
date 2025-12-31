@@ -1,5 +1,5 @@
-import React, { useState } from "react"; // 1. Import useState
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
 import "./SupplierSidebar.css";
 import {
   FaThLarge,
@@ -9,34 +9,47 @@ import {
   FaChartBar,
   FaUserCircle,
   FaCog,
-  FaBars, // 2. Import Menu Icon
-  FaTimes, // 2. Import Close Icon
+  FaBars,
+  FaTimes,
+  FaSignOutAlt, // Added Logout Icon
 } from "react-icons/fa";
 
 const SupplierSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // Hook for redirection
   const isLinkActive = (path) => location.pathname.startsWith(path);
 
-  // 3. Add State for Mobile Toggle
+  // State for Mobile Toggle
   const [isOpen, setIsOpen] = useState(false);
 
-  // 4. Helper to close sidebar when a link is clicked
+  // Helper to close sidebar when a link is clicked
   const handleLinkClick = () => {
     setIsOpen(false);
   };
 
+  // Logout Functionality
+  const handleLogout = () => {
+    // 1. Clear session data
+    localStorage.removeItem("userInfo");
+    // 2. Close mobile menu if open
+    setIsOpen(false);
+    // 3. Redirect to login
+    navigate("/login", { replace: true });
+    // 4. Force reload to reset all states
+    window.location.reload();
+  };
+
   return (
     <>
-      {/* 5. Mobile Toggle Button (Visible only on mobile via CSS) */}
+      {/* Mobile Toggle Button */}
       <button className="mobile-menu-toggle" onClick={() => setIsOpen(true)}>
         <FaBars /> Menu
       </button>
 
-      {/* 6. Add 'open' class based on state */}
+      {/* Sidebar Container */}
       <div className={`supplier-sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <h3>Supplier Portal</h3>
-          {/* 7. Close Button inside Sidebar */}
           <button
             className="close-sidebar-btn"
             onClick={() => setIsOpen(false)}
@@ -90,23 +103,18 @@ const SupplierSidebar = () => {
             </Link>
           </li>
         </ul>
+
+        {/* LOGOUT BUTTON SECTION */}
+        <div className="sidebar-footer">
+          <button className="logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
+        </div>
       </div>
 
-      {/* 8. Overlay to close when clicking outside */}
+      {/* Overlay */}
       {isOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setIsOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 1099,
-          }}
-        ></div>
+        <div className="sidebar-overlay" onClick={() => setIsOpen(false)}></div>
       )}
     </>
   );

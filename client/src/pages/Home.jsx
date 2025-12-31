@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import "./Home.css";
-import { FaMapMarkerAlt, FaPlayCircle } from "react-icons/fa";
+import {
+  FaMapMarkerAlt,
+  FaPlayCircle,
+  FaEnvelope,
+  FaPhoneAlt,
+} from "react-icons/fa";
 
 // Import Hero Images
 import hero1 from "../assets/hero1.png";
@@ -21,7 +26,7 @@ const Home = () => {
       setCurrentImage((prev) => (prev + 1) % heroImages.length);
     }, 5000);
     return () => clearInterval(slideInterval);
-  }, []);
+  }, [heroImages.length]);
 
   return (
     <div className="home-container">
@@ -49,22 +54,26 @@ const Home = () => {
 
       <div className="content-container">
         <div className="left-column">
-          {/* Virtual Mill Tour */}
-          <section className="section-block">
-            <h2 className="section-title">Virtual Mill Tour</h2>
+          {/* 1. OUR PROCESS SECTION (Added ID for Navigation) */}
+          <section className="section-block" id="process">
+            <h2 className="section-title">Our Process & Virtual Tour</h2>
+            <p className="section-desc">
+              From harvesting in the fertile fields to high-tech milling,
+              discover how GrainBridge ensures every grain meets international
+              standards.
+            </p>
             <div className="video-wrapper">
               <div className="video-placeholder">
                 <FaPlayCircle className="play-icon" />
-                <p>Watch Virtual Tour</p>
+                <p>Watch Virtual Mill Tour</p>
               </div>
             </div>
           </section>
 
-          {/* Featured Products - UPDATED WITH IMAGES & PKR */}
+          {/* Featured Products */}
           <section className="section-block">
             <h2 className="section-title">Featured Products</h2>
             <div className="product-grid">
-              {/* Product 1: Basmati */}
               <div className="product-card">
                 <img
                   src={prodBasmati}
@@ -80,7 +89,6 @@ const Home = () => {
                 </p>
               </div>
 
-              {/* Product 2: Jasmine */}
               <div className="product-card">
                 <img
                   src={prodJasmine}
@@ -96,7 +104,6 @@ const Home = () => {
                 </p>
               </div>
 
-              {/* Product 3: Brown */}
               <div className="product-card">
                 <img
                   src={prodBrown}
@@ -129,7 +136,7 @@ const Home = () => {
             </div>
           </section>
 
-          {/* Market Ticker - UPDATED CURRENCY */}
+          {/* Market Ticker */}
           <section className="section-block ticker-block">
             <h2 className="section-title">Live Market Rates</h2>
             <table className="ticker-table">
@@ -161,6 +168,30 @@ const Home = () => {
           </section>
         </div>
       </div>
+
+      {/* 2. CONTACT SECTION (Added ID for Navigation) */}
+      <section className="contact-section-home" id="contact">
+        <div className="contact-content-wrapper">
+          <h2 className="section-title">Get In Touch</h2>
+          <div className="contact-grid-home">
+            <div className="contact-info-card">
+              <FaPhoneAlt className="contact-icon" />
+              <h3>Call Us</h3>
+              <p>+92 300 1234567</p>
+            </div>
+            <div className="contact-info-card">
+              <FaEnvelope className="contact-icon" />
+              <h3>Email Us</h3>
+              <p>info@grainbridge.com</p>
+            </div>
+            <div className="contact-info-card">
+              <FaMapMarkerAlt className="contact-icon" />
+              <h3>Visit Us</h3>
+              <p>Rice Industrial Zone, Punjab, Pakistan</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

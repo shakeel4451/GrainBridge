@@ -374,3 +374,37 @@
 }
 
 /* ... Rest of CSS ... */
+
+.contact-section-home {
+  padding: 60px 20px;
+  background-color: #f8f9fa;
+  text-align: center;
+}
+
+.contact-grid-home {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+
+.contact-info-card {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  width: 250px;
+}
+
+.contact-icon {
+  font-size: 30px;
+  color: #3e5235;
+  margin-bottom: 15px;
+}
+
+.section-desc {
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}

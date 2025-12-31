@@ -1,11 +1,20 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Products from "./pages/Products";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+
+// Protection Component
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Portals (Dashboards)
 import AdminDashboard from "./pages/AdminDashboard";
@@ -15,7 +24,7 @@ import SupplierDashboard from "./pages/SupplierDashboard";
 // Supplier Subpages
 import SupplierPayments from "./pages/SupplierPayments";
 import SupplierDemand from "./pages/SupplierDemand";
-import SupplierAIQuality from "./pages/SupplierAIQuality"; // <-- AI Quality Scanner Import
+import SupplierAIQuality from "./pages/SupplierAIQuality";
 import SupplierProfile from "./pages/SupplierProfile";
 import { SupplierSettings } from "./pages/PortalSettings";
 
@@ -38,8 +47,6 @@ import { AdminSettings } from "./pages/PortalSettings";
 // AI Component
 import AiChatbot from "./components/AiChatbot";
 
-import Register from "./pages/Register";
-
 import "./App.css";
 
 function App() {
@@ -49,52 +56,213 @@ function App() {
         <Navbar />
         <Routes>
           {/* ====================================
-             1. PUBLIC ROUTES
-             ==================================== */}
+               1. PUBLIC ROUTES
+               ==================================== */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/products" element={<Products />} />
-          {/* Login Routes (all point to the unified Login component) */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* Explicitly map potential anchor routes to Home to prevent redirect */}
+          <Route path="/process" element={<Home />} />
+          <Route path="/contact" element={<Home />} />
+
+          {/* Unified Login Redirections */}
           <Route path="/login/customer" element={<Login />} />
           <Route path="/login/supplier" element={<Login />} />
           <Route path="/login/admin" element={<Login />} />
+
           {/* ====================================
-             2. ADMIN PORTAL ROUTES
-             ==================================== */}
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/inventory" element={<AdminInventory />} />
-          <Route path="/admin/sales" element={<AdminSales />} />
-          <Route path="/admin/orders" element={<AdminSales />} />{" "}
-          <Route path="/admin/milling" element={<AdminMilling />} />
-          <Route path="/admin/customers" element={<AdminCustomers />} />
-          <Route path="/admin/suppliers" element={<AdminSuppliers />} />
-          <Route path="/admin/reports" element={<AdminReports />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
+               2. ADMIN PORTAL ROUTES (PROTECTED)
+               ==================================== */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/inventory"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminInventory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sales"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminSales />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminSales />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/milling"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminMilling />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/customers"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminCustomers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/suppliers"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminSuppliers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+
           {/* ====================================
-             3. SUPPLIER PORTAL ROUTES
-             ==================================== */}
-          <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
-          <Route path="/supplier/payments" element={<SupplierPayments />} />
-          <Route path="/supplier/demand" element={<SupplierDemand />} />
-          {/* AI Quality Scanner Routes (Both quality/ and quality-ai/ point to the new component) */}
-          <Route path="/supplier/quality" element={<SupplierAIQuality />} />
-          <Route path="/supplier/quality-ai" element={<SupplierAIQuality />} />
-          <Route path="/supplier/profile" element={<SupplierProfile />} />
-          <Route path="/supplier/settings" element={<SupplierSettings />} />
+               3. SUPPLIER PORTAL ROUTES (PROTECTED)
+               ==================================== */}
+          <Route
+            path="/supplier/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supplier/payments"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierPayments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supplier/demand"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierDemand />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supplier/quality"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierAIQuality />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supplier/quality-ai"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierAIQuality />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supplier/profile"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supplier/settings"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierSettings />
+              </ProtectedRoute>
+            }
+          />
+
           {/* ====================================
-             4. CUSTOMER PORTAL ROUTES
-             ==================================== */}
-          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-          <Route path="/customer/history" element={<CustomerHistory />} />
-          <Route path="/customer/tracking" element={<CustomerTracking />} />
+               4. CUSTOMER PORTAL ROUTES (PROTECTED)
+               ==================================== */}
+          <Route
+            path="/customer/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer/history"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer/tracking"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerTracking />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/customer/traceability"
-            element={<CustomerTraceability />}
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerTraceability />
+              </ProtectedRoute>
+            }
           />
-          <Route path="/customer/profile" element={<CustomerProfile />} />
-          <Route path="/customer/settings" element={<CustomerSettings />} />
+          <Route
+            path="/customer/profile"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer/settings"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerSettings />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Fallback for unmatched routes */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <Footer />
         <AiChatbot />

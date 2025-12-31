@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
 import "./AdminSidebar.css";
 import {
   FaThLarge,
@@ -11,12 +11,14 @@ import {
   FaTruck,
   FaFileAlt,
   FaCog,
-  FaBars, // Import Menu Icon
-  FaTimes, // Import Close Icon
+  FaBars,
+  FaTimes,
+  FaSignOutAlt, // Added Logout Icon
 } from "react-icons/fa";
 
 const AdminSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // Hook for redirection
   const isLinkActive = (path) => location.pathname.startsWith(path);
 
   // State for Mobile Toggle
@@ -27,6 +29,18 @@ const AdminSidebar = () => {
     setIsOpen(false);
   };
 
+  // Logout Functionality
+  const handleLogout = () => {
+    // 1. Clear session data
+    localStorage.removeItem("userInfo");
+    // 2. Close mobile menu if open
+    setIsOpen(false);
+    // 3. Redirect to login
+    navigate("/login", { replace: true });
+    // 4. Force reload to reset all states
+    window.location.reload();
+  };
+
   return (
     <>
       {/* Mobile Toggle Button */}
@@ -34,11 +48,10 @@ const AdminSidebar = () => {
         <FaBars /> Menu
       </button>
 
-      {/* Sidebar Container with conditional class */}
+      {/* Sidebar Container */}
       <div className={`admin-sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <h3>Admin Portal</h3>
-          {/* Close Button */}
           <button
             className="close-sidebar-btn"
             onClick={() => setIsOpen(false)}
@@ -102,23 +115,18 @@ const AdminSidebar = () => {
             </Link>
           </li>
         </ul>
+
+        {/* LOGOUT BUTTON SECTION */}
+        <div className="sidebar-footer">
+          <button className="logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
+        </div>
       </div>
 
       {/* Overlay */}
       {isOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setIsOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 1099,
-          }}
-        ></div>
+        <div className="sidebar-overlay" onClick={() => setIsOpen(false)}></div>
       )}
     </>
   );
