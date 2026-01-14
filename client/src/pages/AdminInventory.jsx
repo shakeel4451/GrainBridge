@@ -1,58 +1,103 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
-import "./AdminDashboard.css"; // Reusing dashboard styles
+import "./AdminInventory.css";
 import {
   FaWarehouse,
-  FaCheck,
-  FaExclamationTriangle,
+  FaPlus,
+  FaTrash,
+  FaEdit,
   FaBox,
+  FaExclamationTriangle,
+  FaCheckCircle,
 } from "react-icons/fa";
 
 const AdminInventory = () => {
-  const inventory = [
-    {
-      id: 1,
-      product: "Premium Basmati",
-      grade: "Export Grade A",
-      stock: 5500,
-      location: "WH-A1",
-      lastChecked: "2025-11-28",
-      status: "Optimal",
-    },
-    {
-      id: 2,
-      product: "Super Kernel Basmati",
-      grade: "Grade B",
-      stock: 1200,
-      location: "WH-C2",
-      lastChecked: "2025-11-27",
-      status: "Low Stock",
-    },
-    {
-      id: 3,
-      product: "Organic Brown Rice",
-      grade: "Health Grade",
-      stock: 250,
-      location: "WH-B3",
-      lastChecked: "2025-11-29",
-      status: "Critical",
-    },
-    {
-      id: 4,
-      product: "Irri-6 Economy Rice",
-      grade: "Standard Grade",
-      stock: 15000,
-      location: "WH-D1",
-      lastChecked: "2025-11-29",
-      status: "Optimal",
-    },
-  ];
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const getStatusClass = (status) => {
-    if (status === "Optimal") return "status success";
-    if (status === "Low Stock") return "status pending";
-    if (status === "Critical") return "status error";
-    return "";
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    sku: "",
+    category: "Basmati",
+    currentStock: "",
+    pricePerBag: "",
+  });
+
+  const API_URL = "http://localhost:5000/api/products";
+
+  // 1. Fetch Products from Database
+  const fetchProducts = async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+      };
+      const { data } = await axios.get(API_URL, config);
+      setProducts(data);
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to fetch inventory. Please check your connection.");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  // 2. Handle Input Changes
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // 3. Add New Product
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+      };
+      await axios.post(API_URL, formData, config);
+
+      // Reset form and refresh list
+      setFormData({
+        name: "",
+        sku: "",
+        category: "Basmati",
+        currentStock: "",
+        pricePerBag: "",
+      });
+      fetchProducts();
+    } catch (err) {
+      alert(err.response?.data?.message || "Error adding product.");
+    }
+  };
+
+  // 4. Delete Product
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      try {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        const config = {
+          headers: { Authorization: `Bearer ${userInfo.token}` },
+        };
+        await axios.delete(`${API_URL}/${id}`, config);
+        fetchProducts();
+      } catch (err) {
+        alert("Deletion failed.");
+      }
+    }
+  };
+
+  // Helper for dynamic status classes
+  const getStockStatus = (stock) => {
+    if (stock <= 100) return { label: "Critical", class: "status error" };
+    if (stock <= 500) return { label: "Low Stock", class: "status pending" };
+    return { label: "Optimal", class: "status success" };
   };
 
   return (
@@ -63,6 +108,7 @@ const AdminInventory = () => {
           <FaWarehouse /> Inventory Management
         </h1>
 
+        {/* STATS OVERVIEW */}
         <div
           className="dashboard-grid inventory-stats"
           style={{ marginBottom: "30px" }}
@@ -71,60 +117,119 @@ const AdminInventory = () => {
             className="card stat-card"
             style={{ borderLeft: "4px solid #3e5235" }}
           >
-            <p>Total Stock (Bags)</p>
-            <h2>22,000</h2>
-          </div>
-          <div
-            className="card stat-card"
-            style={{ borderLeft: "4px solid #8c734b" }}
-          >
-            <p>Low Stock Alerts</p>
-            <h2 style={{ color: "#f57c00" }}>3</h2>
+            <p>Total Varieties</p>
+            <h2>{products.length}</h2>
           </div>
           <div
             className="card stat-card"
             style={{ borderLeft: "4px solid #f57c00" }}
           >
-            <p>Needs Quality Check</p>
-            <h2 style={{ color: "#d32f2f" }}>12 Batches</h2>
+            <p>Low Stock Items</p>
+            <h2 style={{ color: "#f57c00" }}>
+              {products.filter((p) => p.currentStock <= 500).length}
+            </h2>
           </div>
         </div>
 
+        {/* ADD PRODUCT FORM */}
+        <div className="card inventory-form-card">
+          <h3>
+            <FaPlus /> Add New Rice Variety
+          </h3>
+          <form className="inventory-form" onSubmit={handleSubmit}>
+            <input
+              name="name"
+              type="text"
+              placeholder="Product Name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+            <input
+              name="sku"
+              type="text"
+              placeholder="SKU (e.g., BSM-01)"
+              value={formData.sku}
+              onChange={handleChange}
+              required
+            />
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+            >
+              <option value="Basmati">Basmati</option>
+              <option value="Kainat">Kainat</option>
+              <option value="Irri-6">Irri-6</option>
+              <option value="Brown Rice">Brown Rice</option>
+            </select>
+            <input
+              name="currentStock"
+              type="number"
+              placeholder="Stock (Bags)"
+              value={formData.currentStock}
+              onChange={handleChange}
+              required
+            />
+            <input
+              name="pricePerBag"
+              type="number"
+              placeholder="Price / Bag"
+              value={formData.pricePerBag}
+              onChange={handleChange}
+              required
+            />
+            <button type="submit" className="add-btn">
+              Add to Stock
+            </button>
+          </form>
+        </div>
+
+        {/* INVENTORY TABLE */}
         <div className="card">
           <h3>Current Stock Levels</h3>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Grade</th>
-                <th>Stock (Bags)</th>
-                <th>Warehouse Loc.</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inventory.map((item) => (
-                <tr key={item.id}>
-                  <td style={{ fontWeight: "bold" }}>{item.product}</td>
-                  <td>{item.grade}</td>
-                  <td>{item.stock.toLocaleString()}</td>
-                  <td>
-                    <FaBox style={{ marginRight: "5px", color: "#8c734b" }} />
-                    {item.location}
-                  </td>
-                  <td>
-                    <span className={getStatusClass(item.status)}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="action-btn track">View Details</button>
-                  </td>
+          {loading ? (
+            <p>Loading your inventory...</p>
+          ) : error ? (
+            <p className="error-text">{error}</p>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Stock (Bags)</th>
+                  <th>Price (PKR)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {products.map((product) => {
+                  const status = getStockStatus(product.currentStock);
+                  return (
+                    <tr key={product._id}>
+                      <td style={{ fontWeight: "bold" }}>{product.name}</td>
+                      <td>{product.sku}</td>
+                      <td>{product.currentStock.toLocaleString()}</td>
+                      <td>Rs. {product.pricePerBag}</td>
+                      <td>
+                        <span className={status.class}>{status.label}</span>
+                      </td>
+                      <td>
+                        <button
+                          className="action-btn delete"
+                          onClick={() => handleDelete(product._id)}
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </main>
     </div>
