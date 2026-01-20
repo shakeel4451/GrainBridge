@@ -1,0 +1,33 @@
+.admin-table td {
+  vertical-align: middle;
+}
+
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.action-btn.track {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #f4f4f4;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-btn.track:hover {
+  background: #3e5235;
+  color: white;
+}
+
+.error-text {
+  color: #d32f2f;
+  text-align: center;
+  font-weight: bold;
+}

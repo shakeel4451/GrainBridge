@@ -1,44 +1,32 @@
-// backend/models/Product.js
-
 const mongoose = require("mongoose");
 
-const ProductSchema = new mongoose.Schema(
+const productSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
+    name: { 
+        type: String, 
+        required: true 
     },
-    sku: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
+    sku: { 
+        type: String, 
+        required: true, 
+        unique: true 
     },
-    category: {
-      type: String,
-      enum: ["Basmati", "Kainat", "Irri-6", "Brown Rice", "Other"],
-      default: "Other",
+    category: { 
+        type: String, 
+        required: true,
+        enum: ["Basmati", "Healthy", "Economy", "Sella", "Kainat"] // Added allowed categories
     },
-    currentStock: {
-      type: Number,
-      default: 0,
-      min: 0,
+    currentStock: { 
+        type: Number, 
+        required: true, 
+        default: 0 
     },
-    pricePerBag: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    description: {
-      type: String,
-      trim: true,
+    pricePerBag: { 
+        type: Number, 
+        required: true 
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("Product", ProductSchema);
+module.exports = mongoose.model("Product", productSchema);

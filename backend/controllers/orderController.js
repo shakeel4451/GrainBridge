@@ -1,5 +1,5 @@
 const Order = require("../models/Order");
-const Product = require("../models/productModel"); // Ensure this path is correct
+const Product = require("../models/Product"); // Changed from productModel to Product
 
 // @desc    Get orders for Admin or Customer/Supplier
 // @route   GET /api/orders
@@ -17,7 +17,7 @@ exports.getOrders = async (req, res) => {
     const orders = await Order.find(query)
       .populate("customer", "name companyName")
       .populate("items.product", "name sku")
-      .sort("-createdAt"); // Show newest orders first
+      .sort("-createdAt");
 
     res.status(200).json(orders);
   } catch (error) {
@@ -42,7 +42,7 @@ exports.createOrder = async (req, res) => {
       if (!product) {
         return res
           .status(404)
-          .json({ message: `Product not found: ${item.product}` });
+          .json({ message: `Product not found ID: ${item.product}` });
       }
       if (product.currentStock < item.quantity) {
         return res.status(400).json({

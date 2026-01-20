@@ -1,28 +1,22 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./Products.css";
-import { FaShoppingCart, FaFilter } from "react-icons/fa";
+import { FaShoppingCart, FaFilter, FaExclamationCircle } from "react-icons/fa";
 
 // Import Images
 import prodBasmati from "../assets/basmati.png";
-import prodJasmine from "../assets/jasmine.png";
 import prodBrown from "../assets/brown.png";
-import prodSella from "../assets/sella.png";
-import prodTotah from "../assets/totah.png";
-import prodSuperKernel from "../assets/kernal.png";
 import prodIrri6 from "../assets/irri-6.png";
 import prodKainat from "../assets/kainat.png";
 
 const Products = () => {
-  // 1. States
-  const [dbProducts, setDbProducts] = useState([]); // Real data from MongoDB
+  const [dbProducts, setDbProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
-  const [quantities, setQuantities] = useState({}); // Track quantity for each item
+  const [quantities, setQuantities] = useState({});
 
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
-  // 2. Fetch Live Inventory from Backend
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -43,34 +37,27 @@ const Products = () => {
     fetchProducts();
   }, [userInfo?.token]);
 
-  // 3. Helper to match DB products with your local Images
+  // Helper to match DB products with local assets
   const getImage = (category) => {
-    if (category === "Basmati") return prodBasmati;
-    if (category === "Healthy") return prodBrown;
-    if (category === "Economy") return prodIrri6;
-    return prodKainat; // Default
+    switch (category) {
+      case "Basmati":
+        return prodBasmati;
+      case "Healthy":
+        return prodBrown;
+      case "Economy":
+        return prodIrri6;
+      default:
+        return prodKainat;
+    }
   };
 
-  // 4. Filter Logic
   const filteredProducts =
     filter === "All"
       ? dbProducts
       : dbProducts.filter((p) => p.category === filter);
 
-  // 5. Handle Quantity Change
-  const handleQtyChange = (id, val) => {
-    setQuantities({ ...quantities, [id]: val });
-  };
-
-  // 6. Place Order Logic
   const handleOrder = async (product) => {
     const qty = parseInt(quantities[product._id] || 1);
-
-    if (qty > product.currentStock) {
-      alert(`Only ${product.currentStock} bags available!`);
-      return;
-    }
-
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const orderData = {
@@ -82,15 +69,13 @@ const Products = () => {
           },
         ],
         totalAmount: product.pricePerBag * qty,
-        shippingAddress:
-          userInfo.address || "Please provide address in profile",
+        shippingAddress: userInfo.address || "Check Profile for Address",
       };
-
       await axios.post("http://localhost:5000/api/orders", orderData, config);
-      alert(`Order placed for ${qty} bag(s) of ${product.name}!`);
-      window.location.reload(); // Refresh to update stock count
+      alert("Order placed successfully!");
+      window.location.reload();
     } catch (err) {
-      alert("Order failed. Please try again.");
+      alert(err.response?.data?.message || "Order failed.");
     }
   };
 
@@ -98,11 +83,10 @@ const Products = () => {
     <div className="products-page">
       <div className="products-header">
         <h1>Our Product Range</h1>
-        <p>Choose from Pakistan's finest selection of rice</p>
+        <p>Directly from the Rice Mill to your doorstep</p>
       </div>
 
       <div className="products-container">
-        {/* Filter Sidebar */}
         <div className="filter-bar">
           <h3>
             <FaFilter /> Categories
@@ -113,15 +97,23 @@ const Products = () => {
               className={filter === cat ? "active" : ""}
               onClick={() => setFilter(cat)}
             >
-              {cat === "All" ? "All Products" : cat}
+              {cat}
             </button>
           ))}
         </div>
 
-        {/* Product Grid */}
         <div className="product-list">
           {loading ? (
-            <p>Loading Premium Grains...</p>
+            <p>Loading Products...</p>
+          ) : filteredProducts.length === 0 ? (
+            <div className="empty-state">
+              <FaExclamationCircle size={50} color="#ccc" />
+              <h3>No products found!</h3>
+              <p>
+                Please log in as <b>Admin</b> and add products to the Inventory
+                to see them here.
+              </p>
+            </div>
           ) : (
             filteredProducts.map((product) => (
               <div key={product._id} className="shop-card">
@@ -130,7 +122,7 @@ const Products = () => {
                   <span className="category-badge">{product.category}</span>
                   <h3>{product.name}</h3>
                   <p className="stock-info">
-                    Available: {product.currentStock} Bags
+                    Stock: {product.currentStock} Bags
                   </p>
                   <div className="qty-input-group">
                     <label>Qty:</label>
@@ -139,13 +131,16 @@ const Products = () => {
                       min="1"
                       defaultValue="1"
                       onChange={(e) =>
-                        handleQtyChange(product._id, e.target.value)
+                        setQuantities({
+                          ...quantities,
+                          [product._id]: e.target.value,
+                        })
                       }
                     />
                   </div>
                   <div className="shop-footer">
                     <span className="shop-price">
-                      Rs. {product.pricePerBag}/bag
+                      Rs. {product.pricePerBag}
                     </span>
                     <button
                       className="add-btn"
@@ -153,7 +148,7 @@ const Products = () => {
                       disabled={product.currentStock <= 0}
                     >
                       <FaShoppingCart />{" "}
-                      {product.currentStock > 0 ? "Order" : "Sold Out"}
+                      {product.currentStock > 0 ? "Order" : "Out of Stock"}
                     </button>
                   </div>
                 </div>
