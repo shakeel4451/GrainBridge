@@ -1,6 +1,6 @@
 // backend/routes/orderRoutes.js
-
 const express = require("express");
+const router = express.Router();
 const {
   getOrders,
   createOrder,
@@ -8,15 +8,15 @@ const {
 } = require("../controllers/orderController");
 const { protect, restrictTo } = require("../middleware/authMiddleware");
 
-const router = express.Router();
-
+// 1. General Order Routes
 router
   .route("/")
-  .get(protect, getOrders) // Access for Admin, Customer, Supplier (filtered by controller)
+  .get(protect, getOrders) // Admin gets all, Customer/Supplier get their own (logic is inside controller)
   .post(protect, restrictTo(["Customer"]), createOrder); // Only Customers can place orders
 
+// 2. Admin Specific Route (Status Updates)
 router
   .route("/:id/status")
-  .put(protect, restrictTo(["Admin"]), updateOrderStatus); // Only Admin can update status
+  .put(protect, restrictTo(["Admin"]), updateOrderStatus);
 
 module.exports = router;

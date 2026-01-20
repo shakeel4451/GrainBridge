@@ -1,6 +1,5 @@
-// backend/controllers/orderController.js
-
 const Order = require("../models/Order");
+const Product = require("../models/productModel"); // Ensure this path is correct
 
 // @desc    Get orders for Admin or Customer/Supplier
 // @route   GET /api/orders
@@ -10,41 +9,71 @@ exports.getOrders = async (req, res) => {
     let query = {};
     const role = req.user.role;
 
-    // If not Admin, filter orders specific to the logged-in user (Customer or Supplier)
+    // Filter orders if not Admin
     if (role !== "Admin") {
       query = { customer: req.user.id };
     }
 
     const orders = await Order.find(query)
       .populate("customer", "name companyName")
-      .populate("items.product", "name sku");
+      .populate("items.product", "name sku")
+      .sort("-createdAt"); // Show newest orders first
+
     res.status(200).json(orders);
   } catch (error) {
     res.status(500).json({ message: "Server error fetching orders" });
   }
 };
 
-// @desc    Create a new order
+// @desc    Create a new order & update inventory
 // @route   POST /api/orders
 // @access  Private/Customer
 exports.createOrder = async (req, res) => {
-  // Logic to calculate total, check stock, and create order goes here
-  const orderData = {
-    ...req.body,
-    customer: req.user.id, // Assign logged-in user as the customer
-  };
+  const { items, totalAmount, shippingAddress } = req.body;
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ message: "No items in order" });
+  }
 
   try {
-    const order = await Order.create(orderData);
-    // In a real app, you would reduce product stock here.
+    // 1. Check stock availability for all items first
+    for (const item of items) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res
+          .status(404)
+          .json({ message: `Product not found: ${item.product}` });
+      }
+      if (product.currentStock < item.quantity) {
+        return res.status(400).json({
+          message: `Insufficient stock for ${product.name}. Available: ${product.currentStock}`,
+        });
+      }
+    }
+
+    // 2. Create the order
+    const order = await Order.create({
+      customer: req.user.id,
+      items,
+      totalAmount,
+      shippingAddress,
+    });
+
+    // 3. Deduct stock from Inventory
+    for (const item of items) {
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: { currentStock: -item.quantity },
+      });
+    }
+
     res.status(201).json(order);
   } catch (error) {
-    console.error(error);
-    res.status(400).json({ message: "Invalid order data" });
+    console.error("Order Creation Error:", error);
+    res.status(400).json({ message: "Invalid order data or server error" });
   }
 };
 
-// @desc    Update order status (e.g., Processing, Shipped)
+// @desc    Update order status
 // @route   PUT /api/orders/:id/status
 // @access  Private/Admin
 exports.updateOrderStatus = async (req, res) => {
@@ -64,4 +93,3 @@ exports.updateOrderStatus = async (req, res) => {
     res.status(400).json({ message: "Invalid status update data" });
   }
 };
-// Add getOrderById as needed

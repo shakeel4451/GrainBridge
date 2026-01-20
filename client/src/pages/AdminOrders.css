@@ -1,0 +1,116 @@
+/* Layout is shared with AdminInventory */
+.admin-layout {
+  display: flex;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.admin-content {
+  flex-grow: 1;
+  padding: 30px;
+}
+
+.orders-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+/* Table Specific Styling */
+.order-id {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  color: #8c734b;
+}
+
+.customer-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-icon {
+  color: #777;
+}
+
+.order-item-desc {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.box-icon {
+  font-size: 10px;
+  color: #8c734b;
+}
+
+.amount-cell {
+  font-weight: bold;
+  color: #3e5235;
+}
+
+/* Status Badge Styling */
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  width: fit-content;
+}
+
+.status-badge.pending {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+.status-badge.shipped {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+.status-badge.delivered {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.status-badge.processing {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+.status-badge.cancelled {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Status Icon Colors */
+.status-icon.pending {
+  color: #ef6c00;
+}
+.status-icon.shipped {
+  color: #1976d2;
+}
+.status-icon.delivered {
+  color: #2e7d32;
+}
+
+/* Select Dropdown */
+.status-select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.status-select:focus {
+  border-color: #3e5235;
+  outline: none;
+}
+
+.error-text {
+  color: #d32f2f;
+  text-align: center;
+  padding: 20px;
+}
