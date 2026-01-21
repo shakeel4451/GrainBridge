@@ -1,121 +1,145 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
-import "./AdminDashboard.css";
-import { FaUsers, FaSearch, FaEnvelope, FaUserEdit } from "react-icons/fa";
+import "./AdminCustomers.css";
+import {
+  FaUsers,
+  FaSearch,
+  FaEnvelope,
+  FaUserEdit,
+  FaSyncAlt,
+  FaUserTag,
+} from "react-icons/fa";
 
 const AdminCustomers = () => {
-  const customers = [
-    {
-      id: 1,
-      name: "Lahore Mart",
-      email: "lahoremart@example.com",
-      totalSpent: 12500000,
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Ali Traders",
-      email: "alitraders@example.com",
-      totalSpent: 5400000,
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "Karachi Wholesale",
-      email: "karachiw@example.com",
-      totalSpent: 18000000,
-      status: "VIP",
-    },
-    {
-      id: 4,
-      name: "Multan Bulk",
-      email: "multanbulk@example.com",
-      totalSpent: 2100000,
-      status: "Inactive",
-    },
-  ];
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const getStatusClass = (status) => {
-    if (status === "VIP") return "status success";
-    if (status === "Active") return "status processing";
-    if (status === "Inactive") return "status error";
-    return "";
+  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  const config = {
+    headers: { Authorization: `Bearer ${userInfo?.token}` },
   };
+
+  // 1. Fetch real customers from the database
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(
+        "http://localhost:5000/api/auth/users",
+        config
+      );
+
+      // Filter for only Customers
+      const onlyCustomers = data.filter((user) => user.role === "Customer");
+      setCustomers(onlyCustomers);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching customers", err);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  // 2. Search Logic
+  const filteredCustomers = customers.filter(
+    (cust) =>
+      cust.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cust.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="admin-layout">
       <AdminSidebar />
       <main className="admin-content">
-        <h1 className="page-title">
-          <FaUsers /> Customer Accounts Management
-        </h1>
-
-        {/* Search Bar */}
-        <div
-          className="card"
-          style={{
-            marginBottom: "30px",
-            display: "flex",
-            gap: "15px",
-            padding: "20px",
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Search by Name or Email..."
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "6px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <button className="trace-btn" style={{ backgroundColor: "#3e5235" }}>
-            <FaSearch /> Search
+        <div className="admin-header-flex">
+          <h1 className="page-title">
+            <FaUsers /> Customer Accounts
+          </h1>
+          <button className="refresh-btn" onClick={fetchCustomers}>
+            <FaSyncAlt /> Sync Database
           </button>
         </div>
 
-        <div className="card">
-          <h3>Customer List</h3>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Total Spent (PKR)</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((cust) => (
-                <tr key={cust.id}>
-                  <td>{cust.id}</td>
-                  <td style={{ fontWeight: "bold" }}>{cust.name}</td>
-                  <td>
-                    <FaEnvelope
-                      style={{ marginRight: "5px", color: "#8c734b" }}
-                    />
-                    {cust.email}
-                  </td>
-                  <td style={{ color: "#3e5235", fontWeight: "bold" }}>
-                    Rs. {cust.totalSpent.toLocaleString()}
-                  </td>
-                  <td>
-                    <span className={getStatusClass(cust.status)}>
-                      {cust.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="action-btn track">
-                      <FaUserEdit /> Edit
-                    </button>
-                  </td>
+        {/* 3. FUNCTIONAL SEARCH BAR */}
+        <div className="card search-card">
+          <div className="search-wrapper">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search by name, email, or business name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="customer-count">
+            Total Customers: <strong>{customers.length}</strong>
+          </div>
+        </div>
+
+        <div className="card table-card">
+          {loading ? (
+            <div className="loading-state">Fetching customer records...</div>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Customer / Company</th>
+                  <th>Contact Details</th>
+                  <th>Primary Address</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredCustomers.length > 0 ? (
+                  filteredCustomers.map((cust) => (
+                    <tr key={cust._id}>
+                      <td>
+                        <div className="cust-identity">
+                          <strong>{cust.name}</strong>
+                          <span>{cust.companyName || "Retail Buyer"}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="contact-info">
+                          <p>
+                            <FaEnvelope /> {cust.email}
+                          </p>
+                          <p># {cust.phone || "No phone listed"}</p>
+                        </div>
+                      </td>
+                      <td className="address-cell">
+                        {cust.address || "No address provided"}
+                      </td>
+                      <td>
+                        <span className="status-badge active">
+                          <FaUserTag /> Active
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="edit-profile-btn"
+                          onClick={() => alert(`Editing: ${cust.name}`)}
+                        >
+                          <FaUserEdit /> Edit
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="empty-table">
+                      No customers found matching your search.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </main>
     </div>

@@ -1,0 +1,49 @@
+/* Shared Hero Style */
+.process-hero {
+  background: linear-gradient(rgba(62, 82, 53, 0.9), rgba(62, 82, 53, 0.9)),
+    url("../assets/hero1.png");
+  background-size: cover;
+  padding: 100px 10%;
+  text-align: center;
+  color: white;
+}
+
+.process-hero h1 {
+  font-size: 42px;
+  margin-bottom: 10px;
+}
+.process-hero p {
+  color: #8c734b;
+  font-weight: bold;
+}
+
+/* Process Grid */
+.process-content {
+  padding: 80px 10%;
+  background: #f9f9f9;
+}
+.process-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+.process-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  position: relative;
+  border-bottom: 4px solid #8c734b;
+}
+.process-index {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-weight: 800;
+  color: #eee;
+  font-size: 30px;
+}
+.process-icon-box {
+  font-size: 40px;
+  color: #3e5235;
+  margin-bottom: 20px;
+}

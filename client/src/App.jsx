@@ -8,6 +8,8 @@ import {
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
+import OurProcess from "./pages/OurProcess";
+import Contact from "./pages/Contact";
 import About from "./pages/About";
 import Products from "./pages/Products";
 import Login from "./pages/Login";
@@ -23,6 +25,7 @@ import SupplierDashboard from "./pages/SupplierDashboard";
 
 // Supplier Subpages
 import SupplierPayments from "./pages/SupplierPayments";
+import SupplierMarketRates from "./pages/SupplierMarketRates";
 import SupplierDemand from "./pages/SupplierDemand";
 import SupplierAIQuality from "./pages/SupplierAIQuality";
 import SupplierProfile from "./pages/SupplierProfile";
@@ -56,27 +59,25 @@ function App() {
       <div className="App">
         <Navbar />
         <Routes>
-          {/* 1. PUBLIC ROUTES */}
+          {/* ====================================
+               1. PUBLIC ROUTES
+               ==================================== */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/process" element={<OurProcess />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* 2. ADMIN PORTAL ROUTES */}
+          {/* ====================================
+               2. ADMIN PORTAL ROUTES (PROTECTED)
+               ==================================== */}
           <Route
             path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
                 <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/inventory"
-            element={
-              <ProtectedRoute allowedRoles={["Admin"]}>
-                <AdminInventory />
               </ProtectedRoute>
             }
           />
@@ -89,6 +90,38 @@ function App() {
             }
           />
           <Route
+            path="/admin/sales"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminSales />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/inventory"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminInventory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/milling"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminMilling />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/customers"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminCustomers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/suppliers"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
@@ -96,9 +129,26 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* ... other admin routes ... */}
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* 3. SUPPLIER PORTAL ROUTES */}
+          {/* ====================================
+               3. SUPPLIER PORTAL ROUTES (PROTECTED)
+               ==================================== */}
           <Route
             path="/supplier/dashboard"
             element={
@@ -107,7 +157,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* This is the route that was likely causing the issue */}
+          <Route
+            path="/supplier/demand"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierDemand />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/supplier/quality"
             element={
@@ -132,8 +189,26 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/supplier/market-rates"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierMarketRates />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supplier/settings"
+            element={
+              <ProtectedRoute allowedRoles={["Supplier"]}>
+                <SupplierSettings />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* 4. CUSTOMER PORTAL ROUTES */}
+          {/* ====================================
+               4. CUSTOMER PORTAL ROUTES (PROTECTED)
+               ==================================== */}
           <Route
             path="/customer/dashboard"
             element={
@@ -151,6 +226,14 @@ function App() {
             }
           />
           <Route
+            path="/customer/tracking"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerTracking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/customer/traceability"
             element={
               <ProtectedRoute allowedRoles={["Customer"]}>
@@ -163,6 +246,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["Customer"]}>
                 <CustomerProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer/settings"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerSettings />
               </ProtectedRoute>
             }
           />

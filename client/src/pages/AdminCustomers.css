@@ -1,0 +1,135 @@
+.admin-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.refresh-btn {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #3e5235;
+  transition: 0.3s;
+}
+
+.refresh-btn:hover {
+  background: #f1f8ef;
+  border-color: #3e5235;
+}
+
+.search-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 25px !important;
+  margin-bottom: 25px;
+}
+
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 500px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8c734b;
+}
+
+.search-wrapper input {
+  width: 100%;
+  padding: 10px 10px 10px 40px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fafafa;
+}
+
+.search-wrapper input:focus {
+  outline: none;
+  border-color: #8c734b;
+  background: white;
+}
+
+.customer-count {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Table Enhancements */
+.cust-identity {
+  display: flex;
+  flex-direction: column;
+}
+
+.cust-identity span {
+  font-size: 11px;
+  color: #8c734b;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.contact-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.address-cell {
+  max-width: 250px;
+  font-size: 12px;
+  color: #777;
+}
+
+.status-badge.active {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+}
+
+.edit-profile-btn {
+  background: none;
+  border: 1px solid #ddd;
+  color: #555;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.edit-profile-btn:hover {
+  background: #3e5235;
+  color: white;
+  border-color: #3e5235;
+}
+
+.loading-state,
+.empty-table {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-style: italic;
+}

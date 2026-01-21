@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./AdminSidebar.css";
 import {
   FaThLarge,
@@ -13,42 +13,32 @@ import {
   FaCog,
   FaBars,
   FaTimes,
-  FaSignOutAlt, // Added Logout Icon
+  FaSignOutAlt,
 } from "react-icons/fa";
 
 const AdminSidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate(); // Hook for redirection
-  const isLinkActive = (path) => location.pathname.startsWith(path);
-
-  // State for Mobile Toggle
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Helper to close sidebar when a link is clicked
-  const handleLinkClick = () => {
-    setIsOpen(false);
-  };
+  // Exact match helper for active links
+  const isLinkActive = (path) => location.pathname === path;
 
-  // Logout Functionality
+  const handleLinkClick = () => setIsOpen(false);
+
   const handleLogout = () => {
-    // 1. Clear session data
     localStorage.removeItem("userInfo");
-    // 2. Close mobile menu if open
     setIsOpen(false);
-    // 3. Redirect to login
     navigate("/login", { replace: true });
-    // 4. Force reload to reset all states
     window.location.reload();
   };
 
   return (
     <>
-      {/* Mobile Toggle Button */}
       <button className="mobile-menu-toggle" onClick={() => setIsOpen(true)}>
         <FaBars /> Menu
       </button>
 
-      {/* Sidebar Container */}
       <div className={`admin-sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <h3>Admin Portal</h3>
@@ -116,7 +106,6 @@ const AdminSidebar = () => {
           </li>
         </ul>
 
-        {/* LOGOUT BUTTON SECTION */}
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
             <FaSignOutAlt /> Logout
@@ -124,7 +113,6 @@ const AdminSidebar = () => {
         </div>
       </div>
 
-      {/* Overlay */}
       {isOpen && (
         <div className="sidebar-overlay" onClick={() => setIsOpen(false)}></div>
       )}

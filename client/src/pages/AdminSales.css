@@ -1,0 +1,120 @@
+.sales-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.refresh-btn {
+  background: #f4f4f4;
+  border: 1px solid #ddd;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  transition: all 0.3s;
+}
+
+.refresh-btn:hover {
+  background: #eee;
+  color: #3e5235;
+}
+
+.table-title-area {
+  margin-bottom: 20px;
+}
+.table-title-area p {
+  font-size: 13px;
+  color: #777;
+  margin-top: 5px;
+}
+
+.order-id {
+  font-family: monospace;
+  font-weight: bold;
+  color: #8c734b;
+  font-size: 15px;
+}
+
+.cust-info {
+  display: flex;
+  flex-direction: column;
+}
+.cust-info span {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.price-bold {
+  font-weight: 800;
+  color: #3e5235;
+}
+
+.action-button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.ship-btn {
+  background: #3e5235;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.ship-btn:hover {
+  background: #2c3e26;
+}
+
+.invoice-btn {
+  background: white;
+  color: #555;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.invoice-btn:hover {
+  border-color: #8c734b;
+  color: #8c734b;
+}
+
+.loading-spinner-box {
+  text-align: center;
+  padding: 50px;
+  font-weight: bold;
+  color: #3e5235;
+}
+
+/* Status Classes */
+.status.pending {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+.status.processing {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+.status.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.status.error {
+  background: #ffebee;
+  color: #c62828;
+}
