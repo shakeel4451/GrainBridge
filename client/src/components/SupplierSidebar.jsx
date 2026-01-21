@@ -77,8 +77,8 @@ const SupplierSidebar = () => {
             </Link>
           </li>
 
-          <li className={isLinkActive("/supplier/quality-ai") ? "active" : ""}>
-            <Link to="/supplier/quality-ai" onClick={handleLinkClick}>
+          <li className={isLinkActive("/supplier/quality") ? "active" : ""}>
+            <Link to="/supplier/quality" onClick={handleLinkClick}>
               <FaSeedling /> Quality Scanner (AI)
             </Link>
           </li>
