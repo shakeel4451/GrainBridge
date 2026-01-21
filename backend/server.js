@@ -9,7 +9,8 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
-const inventoryRoutes = require("./routes/inventoryRoutes"); // ✅ Added
+const inventoryRoutes = require("./routes/inventoryRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,7 +35,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
-app.use("/api/inventory", inventoryRoutes); // ✅ Added
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

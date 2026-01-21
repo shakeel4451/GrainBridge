@@ -3,7 +3,10 @@ const router = express.Router();
 
 // 1. Import the controller functions
 // Ensure the filename matches exactly: controllers/inventoryController.js
-const { getStockAlerts } = require("../controllers/inventoryController");
+const {
+  getStockAlerts,
+  restockItem,
+} = require("../controllers/inventoryController");
 
 // 2. Import your specific middleware functions
 // Using 'restrictTo' as defined in your authMiddleware.js
@@ -15,5 +18,6 @@ const { protect, restrictTo } = require("../middleware/authMiddleware");
  * @access  Private (Admin Only)
  */
 router.get("/alerts", protect, restrictTo(["Admin"]), getStockAlerts);
+router.put("/:id/restock", protect, restrictTo(["Admin"]), restockItem);
 
 module.exports = router;

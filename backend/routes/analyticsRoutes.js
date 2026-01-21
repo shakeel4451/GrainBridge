@@ -1,8 +1,21 @@
-import express from "express";
+// backend/routes/analyticsRoutes.js
+const express = require("express");
 const router = express.Router();
-import { getMarketInsights } from "../controllers/analyticsController.js";
-import { protect, admin } from "../middleware/authMiddleware.js";
+const {
+  getMarketInsights,
+  getDashboardMetrics,
+} = require("../controllers/analyticsController");
+const { protect, restrictTo } = require("../middleware/authMiddleware");
 
-router.route("/market-insights").get(protect, admin, getMarketInsights);
+// Route for Growth Trends (The code you provided)
+router.get(
+  "/market-insights",
+  protect,
+  restrictTo(["Admin"]),
+  getMarketInsights
+);
 
-export default router;
+// Route for Top Dashboard Cards
+router.get("/metrics", protect, restrictTo(["Admin"]), getDashboardMetrics);
+
+module.exports = router;

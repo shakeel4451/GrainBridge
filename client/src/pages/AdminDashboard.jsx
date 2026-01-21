@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
 import "./AdminDashboard.css";
@@ -11,9 +11,10 @@ import {
   FaExclamationTriangle,
   FaBoxOpen,
   FaArrowRight,
+  FaTimes,
+  FaPlusCircle,
 } from "react-icons/fa";
 
-// RECHARTS COMPONENTS
 import {
   LineChart,
   Line,
@@ -28,32 +29,92 @@ import {
 } from "recharts";
 
 const AdminDashboard = () => {
+  // --- STATE MANAGEMENT ---
   const [stockAlerts, setStockAlerts] = useState([]);
-  const [loadingAlerts, setLoadingAlerts] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // FETCH STOCK ALERTS
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      try {
-        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-        const config = {
-          headers: { Authorization: `Bearer ${userInfo?.token}` },
-        };
-        const { data } = await axios.get(
-          "http://localhost:5000/api/inventory/alerts",
-          config
-        );
-        setStockAlerts(data.alerts);
-        setLoadingAlerts(false);
-      } catch (err) {
-        console.error("Alert fetch failed", err);
-        setLoadingAlerts(false);
-      }
-    };
-    fetchAlerts();
+  // Initialize metrics with empty array to prevent crashes
+  const [metrics, setMetrics] = useState({
+    totalSales: 0,
+    activeOrders: 0,
+    millingEfficiency: 0,
+    totalInventory: 0,
+    inventoryDistribution: [],
+  });
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [restockAmount, setRestockAmount] = useState(500);
+
+  // --- DATA FETCHING ---
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!userInfo) return;
+
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo?.token}` },
+      };
+
+      // Fetch Alerts and Metrics in parallel for speed
+      const [alertsRes, metricsRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/inventory/alerts", config),
+        axios.get("http://localhost:5000/api/analytics/metrics", config),
+      ]);
+
+      setStockAlerts(alertsRes.data.alerts || []);
+      setMetrics(metricsRes.data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Dashboard Sync Failed:", err);
+      // Even if fetch fails, stop loading so UI doesn't freeze
+      setLoading(false);
+    }
   }, []);
 
-  // SAMPLE DATA & METRICS (Static for now)
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // --- HANDLERS ---
+  const openRestockModal = (item) => {
+    setSelectedItem(item);
+    setRestockAmount(500); // Reset to default
+    setIsModalOpen(true);
+  };
+
+  const closeRestockModal = () => {
+    setIsModalOpen(false);
+    setSelectedItem(null);
+  };
+
+  const handleRestockSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedItem) return;
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo?.token}` },
+      };
+
+      await axios.put(
+        `http://localhost:5000/api/inventory/${selectedItem._id}/restock`,
+        { amount: parseInt(restockAmount) },
+        config
+      );
+
+      alert(`${selectedItem.name} restocked successfully!`);
+      closeRestockModal();
+      fetchDashboardData(); // Live refresh of data
+    } catch (err) {
+      console.error(err);
+      alert("Failed to restock item. Please check server connection.");
+    }
+  };
+
+  // --- STATIC FALLBACK DATA (For Line Chart Only) ---
   const salesData = [
     { name: "Jul", sales: 400000, profit: 80000 },
     { name: "Aug", sales: 450000, profit: 95000 },
@@ -63,12 +124,8 @@ const AdminDashboard = () => {
     { name: "Dec", sales: 750000, profit: 150000 },
   ];
 
-  const inventoryData = [
-    { name: "Basmati", stock: 15000 },
-    { name: "Kainat", stock: 8000 },
-    { name: "Irri-6", stock: 25000 },
-    { name: "Brown", stock: 3500 },
-  ];
+  // Fallback in case DB is empty, so chart doesn't look broken
+  const inventoryFallback = [{ name: "No Data", quantity: 0 }];
 
   const recentOrders = [
     {
@@ -97,21 +154,14 @@ const AdminDashboard = () => {
     },
   ];
 
-  const metrics = {
-    totalSales: "PKR 12.5M",
-    activeOrders: 45,
-    millingEfficiency: "98%",
-    totalInventory: "55K Bags",
-  };
-
   return (
     <div className="admin-layout">
       <AdminSidebar />
       <main className="admin-content">
         <h1 className="page-title">Admin Dashboard</h1>
 
-        {/* 1. CRITICAL STOCK ALERTS (NEW SECTION) */}
-        {!loadingAlerts && stockAlerts.length > 0 && (
+        {/* 1. ALERTS SECTION */}
+        {!loading && stockAlerts.length > 0 && (
           <div className="card alert-card-container">
             <div className="alert-header">
               <FaExclamationTriangle className="warning-icon" />
@@ -129,7 +179,10 @@ const AdminDashboard = () => {
                   </div>
                   <div className="alert-count">
                     <span className="count-red">{item.quantity} Bags</span>
-                    <button className="procure-btn">
+                    <button
+                      className="procure-btn"
+                      onClick={() => openRestockModal(item)}
+                    >
                       Procure <FaArrowRight />
                     </button>
                   </div>
@@ -139,31 +192,76 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* 2. TOP METRICS ROW */}
+        {/* 2. MODAL SECTION */}
+        {isModalOpen && selectedItem && (
+          <div className="modal-overlay">
+            <div className="modal-content card">
+              <div className="modal-header">
+                <h3>
+                  <FaPlusCircle /> Restock Inventory
+                </h3>
+                <button className="close-btn" onClick={closeRestockModal}>
+                  <FaTimes />
+                </button>
+              </div>
+              <form onSubmit={handleRestockSubmit}>
+                <p>
+                  You are restocking: <strong>{selectedItem.name}</strong>
+                </p>
+                <div className="form-group">
+                  <label>Quantity to add (Bags):</label>
+                  <input
+                    type="number"
+                    value={restockAmount}
+                    onChange={(e) => setRestockAmount(e.target.value)}
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={closeRestockModal}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="confirm-btn">
+                    Confirm Restock
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 3. METRICS CARDS */}
         <div className="dashboard-grid inventory-stats">
           <div className="stat-card">
             <p>Total Sales</p>
-            <h2>{metrics.totalSales}</h2>
+            {/* Safe check for NaN */}
+            <h2>PKR {((metrics.totalSales || 0) / 1000000).toFixed(1)}M</h2>
           </div>
           <div className="stat-card">
             <p>Active Orders</p>
-            <h2>{metrics.activeOrders}</h2>
+            <h2>{metrics.activeOrders || 0}</h2>
           </div>
           <div className="stat-card">
             <p>Milling Efficiency</p>
-            <h2 className="success">{metrics.millingEfficiency}</h2>
+            <h2 className="success">{metrics.millingEfficiency || 0}%</h2>
           </div>
           <div className="stat-card">
             <p>Total Inventory</p>
-            <h2>{metrics.totalInventory}</h2>
+            <h2>{((metrics.totalInventory || 0) / 1000).toFixed(1)}K Bags</h2>
           </div>
         </div>
 
-        {/* 3. CHARTS & MAP ROW */}
+        {/* 4. CHARTS SECTION */}
         <div className="dashboard-grid">
-          <div className="card" style={{ flex: 2 }}>
+          {/* Sales Line Chart */}
+          <div className="card chart-box" style={{ flex: 2 }}>
             <h3>
-              <FaChartLine /> Sales & Profit Trend (Last 6 Months)
+              <FaChartLine /> Sales & Profit Trend
             </h3>
             <div style={{ width: "100%", height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -176,13 +274,13 @@ const AdminDashboard = () => {
                   <YAxis
                     yAxisId="left"
                     stroke="#3e5235"
-                    tickFormatter={(value) => `${value / 1000}K`}
+                    tickFormatter={(v) => `${v / 1000}K`}
                   />
                   <YAxis
                     yAxisId="right"
                     orientation="right"
                     stroke="#8c734b"
-                    tickFormatter={(value) => `${value / 1000}K`}
+                    tickFormatter={(v) => `${v / 1000}K`}
                   />
                   <Tooltip />
                   <Legend />
@@ -190,7 +288,6 @@ const AdminDashboard = () => {
                     yAxisId="left"
                     type="monotone"
                     dataKey="sales"
-                    name="Sales"
                     stroke="#3e5235"
                     strokeWidth={2}
                   />
@@ -198,7 +295,6 @@ const AdminDashboard = () => {
                     yAxisId="right"
                     type="monotone"
                     dataKey="profit"
-                    name="Profit"
                     stroke="#8c734b"
                     strokeWidth={2}
                   />
@@ -207,66 +303,65 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="card" style={{ flex: 1 }}>
+          {/* Map Placeholder */}
+          <div className="card chart-box" style={{ flex: 1 }}>
             <h3>
               <FaTruck /> Live Operations Map
             </h3>
             <div className="map-placeholder">
               <FaMapMarkerAlt className="map-icon" />
-              <p>Map Integration Placeholder</p>
-              <span
-                className="map-pin"
-                style={{ top: "30%", left: "40%" }}
-              ></span>
-              <span
-                className="map-pin"
-                style={{ top: "65%", left: "70%", backgroundColor: "#2e7d32" }}
-              ></span>
+              <p>GPS Integration Active</p>
             </div>
           </div>
         </div>
 
-        {/* 4. INVENTORY BAR CHART & AI INSIGHTS */}
+        {/* 5. LIVE INVENTORY BAR CHART */}
         <div className="dashboard-grid">
-          <div className="card" style={{ flex: 1 }}>
+          <div className="card chart-box" style={{ flex: 1 }}>
             <h3>
               <FaWarehouse /> Current Inventory Stock
             </h3>
             <div style={{ width: "100%", height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={inventoryData}
+                  data={
+                    metrics.inventoryDistribution?.length > 0
+                      ? metrics.inventoryDistribution
+                      : inventoryFallback
+                  }
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="name" stroke="#555" />
-                  <YAxis
-                    stroke="#555"
-                    tickFormatter={(value) => `${value / 1000}K`}
-                  />
+                  <YAxis stroke="#555" tickFormatter={(v) => `${v / 1000}K`} />
                   <Tooltip />
-                  <Bar dataKey="stock" fill="#1976d2" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="quantity"
+                    fill="#3e5235"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="card" style={{ flex: 1 }}>
+          <div className="card chart-box" style={{ flex: 1 }}>
             <h3>AI Market Insight</h3>
             <div className="ai-content">
+              <h4>Prediction Engine</h4>
               <p>
-                Prediction: Basmati rice prices expected to rise 10% next
-                quarter due to global demand shift.
+                <strong>Trend:</strong> Basmati prices expected to rise 10% in
+                Q2.
               </p>
               <p>
-                Action: Recommend securing 5,000 additional tons from Supplier
-                Alpha.
+                <strong>Action:</strong> Recommended to secure 5,000 tons from
+                Supplier Alpha immediately.
               </p>
             </div>
           </div>
         </div>
 
-        {/* 5. RECENT ORDERS TABLE */}
+        {/* 6. ORDERS TABLE */}
         <div className="card full-width">
           <h3>
             <FaShoppingCart /> Recent Orders
@@ -294,7 +389,7 @@ const AdminDashboard = () => {
                     </td>
                     <td>{order.date}</td>
                     <td>
-                      <button className="action-btn">View Details</button>
+                      <button className="action-btn">View</button>
                     </td>
                   </tr>
                 ))}
