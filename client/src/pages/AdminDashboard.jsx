@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
 import "./AdminDashboard.css";
 import {
@@ -7,9 +8,12 @@ import {
   FaTruck,
   FaShoppingCart,
   FaWarehouse,
+  FaExclamationTriangle,
+  FaBoxOpen,
+  FaArrowRight,
 } from "react-icons/fa";
 
-// 1. IMPORT RECHARTS COMPONENTS
+// RECHARTS COMPONENTS
 import {
   LineChart,
   Line,
@@ -23,25 +27,49 @@ import {
   Bar,
 } from "recharts";
 
-// 2. SAMPLE DATA
-const salesData = [
-  { name: "Jul", sales: 400000, profit: 80000 },
-  { name: "Aug", sales: 450000, profit: 95000 },
-  { name: "Sep", sales: 520000, profit: 105000 },
-  { name: "Oct", sales: 500000, profit: 100000 },
-  { name: "Nov", sales: 600000, profit: 120000 },
-  { name: "Dec", sales: 750000, profit: 150000 },
-];
-
-const inventoryData = [
-  { name: "Basmati", stock: 15000 },
-  { name: "Kainat", stock: 8000 },
-  { name: "Irri-6", stock: 25000 },
-  { name: "Brown", stock: 3500 },
-];
-
 const AdminDashboard = () => {
-  // Placeholder data for recent orders and metrics
+  const [stockAlerts, setStockAlerts] = useState([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(true);
+
+  // FETCH STOCK ALERTS
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        const config = {
+          headers: { Authorization: `Bearer ${userInfo?.token}` },
+        };
+        const { data } = await axios.get(
+          "http://localhost:5000/api/inventory/alerts",
+          config
+        );
+        setStockAlerts(data.alerts);
+        setLoadingAlerts(false);
+      } catch (err) {
+        console.error("Alert fetch failed", err);
+        setLoadingAlerts(false);
+      }
+    };
+    fetchAlerts();
+  }, []);
+
+  // SAMPLE DATA & METRICS (Static for now)
+  const salesData = [
+    { name: "Jul", sales: 400000, profit: 80000 },
+    { name: "Aug", sales: 450000, profit: 95000 },
+    { name: "Sep", sales: 520000, profit: 105000 },
+    { name: "Oct", sales: 500000, profit: 100000 },
+    { name: "Nov", sales: 600000, profit: 120000 },
+    { name: "Dec", sales: 750000, profit: 150000 },
+  ];
+
+  const inventoryData = [
+    { name: "Basmati", stock: 15000 },
+    { name: "Kainat", stock: 8000 },
+    { name: "Irri-6", stock: 25000 },
+    { name: "Brown", stock: 3500 },
+  ];
+
   const recentOrders = [
     {
       id: "#1001",
@@ -82,7 +110,36 @@ const AdminDashboard = () => {
       <main className="admin-content">
         <h1 className="page-title">Admin Dashboard</h1>
 
-        {/* 1. TOP METRICS ROW (Keep existing) */}
+        {/* 1. CRITICAL STOCK ALERTS (NEW SECTION) */}
+        {!loadingAlerts && stockAlerts.length > 0 && (
+          <div className="card alert-card-container">
+            <div className="alert-header">
+              <FaExclamationTriangle className="warning-icon" />
+              <h3>Critical Stock Alerts ({stockAlerts.length})</h3>
+            </div>
+            <div className="alert-list">
+              {stockAlerts.map((item) => (
+                <div key={item._id} className="alert-item">
+                  <div className="alert-info">
+                    <FaBoxOpen />
+                    <span>
+                      <strong>{item.name}</strong> is critically low (
+                      {item.category})
+                    </span>
+                  </div>
+                  <div className="alert-count">
+                    <span className="count-red">{item.quantity} Bags</span>
+                    <button className="procure-btn">
+                      Procure <FaArrowRight />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 2. TOP METRICS ROW */}
         <div className="dashboard-grid inventory-stats">
           <div className="stat-card">
             <p>Total Sales</p>
@@ -102,7 +159,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* 2. SALES TREND CHART */}
+        {/* 3. CHARTS & MAP ROW */}
         <div className="dashboard-grid">
           <div className="card" style={{ flex: 2 }}>
             <h3>
@@ -119,30 +176,15 @@ const AdminDashboard = () => {
                   <YAxis
                     yAxisId="left"
                     stroke="#3e5235"
-                    label={{
-                      value: "Revenue (PKR)",
-                      angle: -90,
-                      position: "left",
-                    }}
                     tickFormatter={(value) => `${value / 1000}K`}
                   />
                   <YAxis
                     yAxisId="right"
                     orientation="right"
                     stroke="#8c734b"
-                    label={{
-                      value: "Profit (PKR)",
-                      angle: 90,
-                      position: "right",
-                    }}
                     tickFormatter={(value) => `${value / 1000}K`}
                   />
-                  <Tooltip
-                    formatter={(value, name) => [
-                      value.toLocaleString() + " PKR",
-                      name.charAt(0).toUpperCase() + name.slice(1),
-                    ]}
-                  />
+                  <Tooltip />
                   <Legend />
                   <Line
                     yAxisId="left"
@@ -150,7 +192,6 @@ const AdminDashboard = () => {
                     dataKey="sales"
                     name="Sales"
                     stroke="#3e5235"
-                    activeDot={{ r: 8 }}
                     strokeWidth={2}
                   />
                   <Line
@@ -166,7 +207,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* 3. LIVE OPERATIONS MAP (Keep existing placeholder) */}
           <div className="card" style={{ flex: 1 }}>
             <h3>
               <FaTruck /> Live Operations Map
@@ -202,26 +242,15 @@ const AdminDashboard = () => {
                   <XAxis dataKey="name" stroke="#555" />
                   <YAxis
                     stroke="#555"
-                    label={{
-                      value: "Stock (Bags)",
-                      angle: -90,
-                      position: "left",
-                    }}
                     tickFormatter={(value) => `${value / 1000}K`}
                   />
-                  <Tooltip
-                    formatter={(value) => [
-                      value.toLocaleString() + " Bags",
-                      "Stock",
-                    ]}
-                  />
+                  <Tooltip />
                   <Bar dataKey="stock" fill="#1976d2" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* AI Insight Card (Keep existing placeholder) */}
           <div className="card" style={{ flex: 1 }}>
             <h3>AI Market Insight</h3>
             <div className="ai-content">
@@ -231,11 +260,7 @@ const AdminDashboard = () => {
               </p>
               <p>
                 Action: Recommend securing 5,000 additional tons from Supplier
-                Alpha before month-end.
-              </p>
-              <p>
-                Efficiency: Milling system flagged for routine maintenance
-                efficiency dropped to 98% (target 99%).
+                Alpha.
               </p>
             </div>
           </div>
@@ -264,8 +289,7 @@ const AdminDashboard = () => {
                     <td>{order.customer}</td>
                     <td>
                       <span className={`status ${order.status}`}>
-                        {order.status.charAt(0).toUpperCase() +
-                          order.status.slice(1)}
+                        {order.status}
                       </span>
                     </td>
                     <td>{order.date}</td>

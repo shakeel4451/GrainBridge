@@ -221,3 +221,62 @@
     min-width: 600px;
   }
 }
+.alert-card-container {
+  border-left: 6px solid #d32f2f !important;
+  background: #fff5f5 !important;
+  margin-bottom: 25px;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #d32f2f;
+  margin-bottom: 15px;
+}
+
+.alert-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: white;
+  border: 1px solid #ffcdd2;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.alert-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.count-red {
+  color: #d32f2f;
+  font-weight: 800;
+  margin-right: 15px;
+}
+
+.procure-btn {
+  background: #3e5235;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

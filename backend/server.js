@@ -1,4 +1,4 @@
-// backend/server.js (FINAL VERSION)
+// backend/server.js (UPDATED WITH INVENTORY)
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -7,8 +7,9 @@ require("dotenv").config();
 
 // --- 1. Import all Routes ---
 const authRoutes = require("./routes/authRoutes");
-const productRoutes = require("./routes/productRoutes"); // NEW
-const orderRoutes = require("./routes/orderRoutes"); // NEW
+const productRoutes = require("./routes/productRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes"); // ✅ Added
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,8 +32,10 @@ app.get("/", (req, res) => {
 
 // --- 2. Use Routes ---
 app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes); // NEW
-app.use("/api/orders", orderRoutes); // NEW
+app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/inventory", inventoryRoutes); // ✅ Added
+
 // Error Handling Middleware
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
