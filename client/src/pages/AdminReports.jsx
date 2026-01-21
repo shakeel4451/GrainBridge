@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
-import "./AdminReports.css"; // Using dedicated CSS
+import "./AdminReports.css";
 import {
   FaChartBar,
   FaCalendarAlt,
@@ -9,10 +10,45 @@ import {
   FaClipboardCheck,
   FaLightbulb,
   FaArrowUp,
+  FaArrowDown,
   FaFilter,
+  FaSyncAlt,
 } from "react-icons/fa";
 
 const AdminReports = () => {
+  // State for dynamic AI insights
+  const [insight, setInsight] = useState({
+    forecast: "Analyzing market trends...",
+    recommendation: "Fetching latest data...",
+    growth: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch real-time analytics from backend
+  const fetchMarketInsights = async () => {
+    try {
+      setLoading(true);
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo?.token}` },
+      };
+
+      const { data } = await axios.get(
+        "http://localhost:5000/api/analytics/market-insights",
+        config
+      );
+      setInsight(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Failed to fetch real-time market insights", err);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarketInsights();
+  }, []);
+
   return (
     <div className="admin-layout">
       <AdminSidebar />
@@ -21,9 +57,17 @@ const AdminReports = () => {
           <h1 className="page-title">
             <FaChartBar /> Business Intelligence & Reports
           </h1>
-          <button className="download-pdf-btn">
-            <FaDownload /> Export PDF Report
-          </button>
+          <div className="report-actions">
+            <button
+              className="refresh-report-btn"
+              onClick={fetchMarketInsights}
+            >
+              <FaSyncAlt /> Refresh Data
+            </button>
+            <button className="download-pdf-btn">
+              <FaDownload /> Export PDF
+            </button>
+          </div>
         </div>
 
         {/* ANALYTICS FILTER BAR */}
@@ -43,12 +87,11 @@ const AdminReports = () => {
                 <option>All Product Categories</option>
                 <option>Basmati (Export)</option>
                 <option>Sella (Local)</option>
-                <option>Economy (Broken)</option>
               </select>
             </div>
           </div>
           <div className="report-timestamp">
-            Data last updated: Jan 21, 2026, 01:14 PM
+            Data last synced: {new Date().toLocaleTimeString()}
           </div>
         </div>
 
@@ -60,7 +103,7 @@ const AdminReports = () => {
               <FaDatabase /> Product Profitability Margin
             </h3>
             <p className="subtitle">
-              Visual comparison of gross margins per category.
+              Comparison based on current inventory turnover.
             </p>
 
             <div className="bar-chart-vertical">
@@ -141,7 +184,7 @@ const AdminReports = () => {
           </div>
         </div>
 
-        {/* PREDICTIVE AI INSIGHT */}
+        {/* PREDICTIVE AI INSIGHT (CONNECTED TO BACKEND) */}
         <div className="card insight-card">
           <div className="insight-header">
             <div className="ai-icon-circle">
@@ -149,20 +192,34 @@ const AdminReports = () => {
             </div>
             <div>
               <h3>Predictive Strategic Insight</h3>
-              <p>Powered by Market Intelligence Engine</p>
+              <p>Powered by Real-Time Sales Volume Analysis</p>
             </div>
           </div>
+
           <div className="insight-body">
-            <p className="insight-text">
-              <FaArrowUp className="trend-up" />
-              Forecast: <strong>Basmati 1121 Export Demand</strong> is projected
-              to rise by <strong>7.4%</strong> by March 2026.
-            </p>
-            <div className="insight-action-box">
-              <strong>Strategy Recommendation:</strong> Renew procurement
-              contracts with Top-Tier suppliers immediately to hedge against
-              impending price volatility.
-            </div>
+            {loading ? (
+              <div className="loading-insight">
+                Recalculating market trends...
+              </div>
+            ) : (
+              <>
+                <p className="insight-text">
+                  {insight.growth >= 0 ? (
+                    <FaArrowUp className="trend-up" />
+                  ) : (
+                    <FaArrowDown
+                      className="trend-down"
+                      style={{ color: "#d32f2f" }}
+                    />
+                  )}
+                  Forecast: <strong>{insight.forecast}</strong>
+                </p>
+                <div className="insight-action-box">
+                  <strong>Strategy Recommendation:</strong>{" "}
+                  {insight.recommendation}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>
