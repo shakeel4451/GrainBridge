@@ -31,13 +31,14 @@ import { SupplierSettings } from "./pages/PortalSettings";
 // Customer Subpages
 import CustomerHistory from "./pages/CustomerHistory";
 import CustomerTracking from "./pages/CustomerTracking";
-import CustomerTraceability from "./pages/CustomerTraceability";
+import Traceability from "./pages/Traceability"; // Finalized name
 import CustomerProfile from "./pages/CustomerProfile";
 import { CustomerSettings } from "./pages/PortalSettings";
 
 // Admin Subpages
 import AdminInventory from "./pages/AdminInventory";
 import AdminSales from "./pages/AdminSales";
+import AdminOrders from "./pages/AdminOrders"; // Updated Correct Import
 import AdminMilling from "./pages/AdminMilling";
 import AdminCustomers from "./pages/AdminCustomers";
 import AdminSuppliers from "./pages/AdminSuppliers";
@@ -64,7 +65,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Explicitly map potential anchor routes to Home to prevent redirect */}
+          {/* Anchor route mapping */}
           <Route path="/process" element={<Home />} />
           <Route path="/contact" element={<Home />} />
 
@@ -104,7 +105,7 @@ function App() {
             path="/admin/orders"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
-                <AdminSales />
+                <AdminOrders />
               </ProtectedRoute>
             }
           />
@@ -185,14 +186,6 @@ function App() {
             }
           />
           <Route
-            path="/supplier/quality-ai"
-            element={
-              <ProtectedRoute allowedRoles={["Supplier"]}>
-                <SupplierAIQuality />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/supplier/profile"
             element={
               <ProtectedRoute allowedRoles={["Supplier"]}>
@@ -240,7 +233,7 @@ function App() {
             path="/customer/traceability"
             element={
               <ProtectedRoute allowedRoles={["Customer"]}>
-                <CustomerTraceability />
+                <Traceability />
               </ProtectedRoute>
             }
           />

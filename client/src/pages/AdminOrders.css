@@ -4,52 +4,43 @@
   background-color: #f8f9fa;
   min-height: 100vh;
 }
-
 .admin-content {
   flex-grow: 1;
   padding: 30px;
 }
-
 .orders-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
-
 /* Table Specific Styling */
 .order-id {
   font-family: "Courier New", Courier, monospace;
   font-weight: bold;
   color: #8c734b;
 }
-
 .customer-info {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .user-icon {
   color: #777;
 }
-
 .order-item-desc {
   font-size: 13px;
   color: #555;
   margin-bottom: 4px;
 }
-
 .box-icon {
   font-size: 10px;
   color: #8c734b;
 }
-
 .amount-cell {
   font-weight: bold;
   color: #3e5235;
 }
-
 /* Status Badge Styling */
 .status-badge {
   display: flex;
@@ -61,7 +52,6 @@
   font-weight: bold;
   width: fit-content;
 }
-
 .status-badge.pending {
   background: #fff3e0;
   color: #ef6c00;
@@ -82,7 +72,6 @@
   background: #ffebee;
   color: #c62828;
 }
-
 /* Status Icon Colors */
 .status-icon.pending {
   color: #ef6c00;
@@ -93,7 +82,6 @@
 .status-icon.delivered {
   color: #2e7d32;
 }
-
 /* Select Dropdown */
 .status-select {
   padding: 6px 10px;
@@ -103,12 +91,10 @@
   font-size: 13px;
   cursor: pointer;
 }
-
 .status-select:focus {
   border-color: #3e5235;
   outline: none;
 }
-
 .error-text {
   color: #d32f2f;
   text-align: center;

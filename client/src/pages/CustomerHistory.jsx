@@ -1,90 +1,129 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import CustomerSidebar from "../components/CustomerSidebar";
-import "./CustomerDashboard.css"; // Reusing dashboard styles
-import { FaBoxOpen, FaEye, FaRedo } from "react-icons/fa";
+import "./CustomerHistory.css";
+import {
+  FaHistory,
+  FaCalendarAlt,
+  FaHashtag,
+  FaRupeeSign,
+  FaBox,
+  FaInfoCircle,
+} from "react-icons/fa";
 
 const CustomerHistory = () => {
-  const orders = [
-    {
-      id: "#11277",
-      date: "2025-10-28",
-      items: "Basmati 1121 (50 Bags)",
-      total: 225000,
-      status: "Processing",
-    },
-    {
-      id: "#11276",
-      date: "2025-10-15",
-      items: "Super Kernel (20 Bags)",
-      total: 76000,
-      status: "Shipped",
-    },
-    {
-      id: "#11270",
-      date: "2025-09-01",
-      items: "Brown Rice (10 Bags)",
-      total: 52000,
-      status: "Delivered",
-    },
-    {
-      id: "#11265",
-      date: "2025-08-20",
-      items: "Irri-6 Economy (100 Bags)",
-      total: 180000,
-      status: "Delivered",
-    },
-  ];
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  const API_URL = "http://localhost:5000/api/orders";
+
+  useEffect(() => {
+    const fetchMyOrders = async () => {
+      try {
+        const config = {
+          headers: { Authorization: `Bearer ${userInfo?.token}` },
+        };
+        // The backend controller automatically filters orders for the logged-in customer
+        const { data } = await axios.get(API_URL, config);
+        setOrders(data);
+        setLoading(false);
+      } catch (err) {
+        setError(
+          "Could not retrieve your order history. Please try again later."
+        );
+        setLoading(false);
+      }
+    };
+
+    fetchMyOrders();
+  }, [userInfo?.token]);
+
+  // Helper to format date
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
 
   return (
     <div className="customer-layout">
       <CustomerSidebar />
       <main className="customer-content">
         <h1 className="page-title">
-          <FaBoxOpen /> Order History
+          <FaHistory /> Order History
         </h1>
 
-        <div className="card">
-          <table className="customer-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Date</th>
-                <th>Items Summary</th>
-                <th>Total Amount</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="history-container">
+          {loading ? (
+            <div className="loading-state">Loading your rice purchases...</div>
+          ) : error ? (
+            <div className="error-message">{error}</div>
+          ) : orders.length === 0 ? (
+            <div className="card empty-history">
+              <FaBox size={50} color="#ddd" />
+              <h3>No Orders Found</h3>
+              <p>
+                You haven't placed any orders yet. Visit our product range to
+                get started!
+              </p>
+              <button
+                className="shop-now-btn"
+                onClick={() => (window.location.href = "/products")}
+              >
+                Browse Products
+              </button>
+            </div>
+          ) : (
+            <div className="orders-list">
               {orders.map((order) => (
-                <tr key={order.id}>
-                  <td style={{ fontWeight: "bold" }}>{order.id}</td>
-                  <td>{order.date}</td>
-                  <td>{order.items}</td>
-                  <td>Rs. {order.total.toLocaleString()}</td>
-                  <td>
-                    <span className={`status ${order.status.toLowerCase()}`}>
+                <div key={order._id} className="order-history-card">
+                  <div className="order-card-header">
+                    <div className="order-main-info">
+                      <span>
+                        <FaHashtag /> ID: {order._id.slice(-8).toUpperCase()}
+                      </span>
+                      <span>
+                        <FaCalendarAlt /> Ordered on:{" "}
+                        {formatDate(order.createdAt)}
+                      </span>
+                    </div>
+                    <span
+                      className={`status-badge ${order.status.toLowerCase()}`}
+                    >
                       {order.status}
                     </span>
-                  </td>
-                  <td>
-                    <button className="action-btn" title="View Details">
-                      <FaEye />
-                    </button>
-                    {order.status === "Delivered" && (
-                      <button
-                        className="action-btn"
-                        title="Reorder"
-                        style={{ marginLeft: "10px", color: "#3e5235" }}
-                      >
-                        <FaRedo />
+                  </div>
+
+                  <div className="order-card-body">
+                    <div className="items-summary">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="history-item-row">
+                          <span className="item-name">
+                            {item.product?.name || "Premium Rice"}
+                          </span>
+                          <span className="item-qty">{item.quantity} Bags</span>
+                          <span className="item-price">
+                            Rs. {item.priceAtOrder} / bag
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="order-footer">
+                      <div className="total-box">
+                        <p>Total Amount</p>
+                        <h3>Rs. {order.totalAmount.toLocaleString()}</h3>
+                      </div>
+                      <button className="details-btn">
+                        <FaInfoCircle /> View Details
                       </button>
-                    )}
-                  </td>
-                </tr>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       </main>
     </div>

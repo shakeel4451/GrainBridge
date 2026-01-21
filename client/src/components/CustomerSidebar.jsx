@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./CustomerSidebar.css";
 import {
@@ -11,31 +11,24 @@ import {
   FaCog,
   FaBars,
   FaTimes,
-  FaSignOutAlt, // Import Logout Icon
+  FaSignOutAlt,
 } from "react-icons/fa";
 
 const CustomerSidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate(); // Hook for redirection
-  const isLinkActive = (path) => location.pathname.startsWith(path);
-
-  // State for Mobile Toggle
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Helper to close sidebar when a link is clicked
-  const handleLinkClick = () => {
-    setIsOpen(false);
-  };
+  const isLinkActive = (path) => location.pathname === path;
 
-  // Logout Functionality
-  const handleLogout = () => {
-    // 1. Clear session data
-    localStorage.removeItem("userInfo");
-    // 2. Close mobile menu if open
+  // Automatically close sidebar on route change (for mobile)
+  useEffect(() => {
     setIsOpen(false);
-    // 3. Redirect to login
+  }, [location]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("userInfo");
     navigate("/login", { replace: true });
-    // 4. Force reload to reset all states
     window.location.reload();
   };
 
@@ -49,7 +42,9 @@ const CustomerSidebar = () => {
       {/* Sidebar Container */}
       <div className={`customer-sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-header">
-          <h3>Customer Portal</h3>
+          <div className="sidebar-logo">
+            <h3>Customer Portal</h3>
+          </div>
           <button
             className="close-sidebar-btn"
             onClick={() => setIsOpen(false)}
@@ -60,25 +55,25 @@ const CustomerSidebar = () => {
 
         <ul className="sidebar-menu">
           <li className={isLinkActive("/customer/dashboard") ? "active" : ""}>
-            <Link to="/customer/dashboard" onClick={handleLinkClick}>
+            <Link to="/customer/dashboard">
               <FaThLarge /> Dashboard
             </Link>
           </li>
 
           <li className={isLinkActive("/products") ? "active" : ""}>
-            <Link to="/products" onClick={handleLinkClick}>
+            <Link to="/products">
               <FaShoppingCart /> Place New Order
             </Link>
           </li>
 
           <li className={isLinkActive("/customer/history") ? "active" : ""}>
-            <Link to="/customer/history" onClick={handleLinkClick}>
+            <Link to="/customer/history">
               <FaHistory /> Order History
             </Link>
           </li>
 
           <li className={isLinkActive("/customer/tracking") ? "active" : ""}>
-            <Link to="/customer/tracking" onClick={handleLinkClick}>
+            <Link to="/customer/tracking">
               <FaTruck /> Track Shipments
             </Link>
           </li>
@@ -86,25 +81,25 @@ const CustomerSidebar = () => {
           <li
             className={isLinkActive("/customer/traceability") ? "active" : ""}
           >
-            <Link to="/customer/traceability" onClick={handleLinkClick}>
+            <Link to="/customer/traceability">
               <FaMapMarkerAlt /> Traceability Check
             </Link>
           </li>
 
           <li className={isLinkActive("/customer/profile") ? "active" : ""}>
-            <Link to="/customer/profile" onClick={handleLinkClick}>
+            <Link to="/customer/profile">
               <FaUserCircle /> My Profile
             </Link>
           </li>
 
           <li className={isLinkActive("/customer/settings") ? "active" : ""}>
-            <Link to="/customer/settings" onClick={handleLinkClick}>
+            <Link to="/customer/settings">
               <FaCog /> Settings
             </Link>
           </li>
         </ul>
 
-        {/* LOGOUT BUTTON SECTION */}
+        {/* LOGOUT BUTTON */}
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
             <FaSignOutAlt /> Logout
@@ -112,7 +107,7 @@ const CustomerSidebar = () => {
         </div>
       </div>
 
-      {/* Overlay */}
+      {/* Overlay for mobile */}
       {isOpen && (
         <div className="sidebar-overlay" onClick={() => setIsOpen(false)}></div>
       )}
