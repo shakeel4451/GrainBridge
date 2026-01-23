@@ -33,13 +33,14 @@ const AdminDashboard = () => {
   const [stockAlerts, setStockAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Initialize metrics with empty array to prevent crashes
+  // Initialize metrics (Make sure salesTrend is here!)
   const [metrics, setMetrics] = useState({
     totalSales: 0,
     activeOrders: 0,
     millingEfficiency: 0,
     totalInventory: 0,
     inventoryDistribution: [],
+    salesTrend: [], // <--- THIS IS CRITICAL FOR THE NEW CHART
   });
 
   // Modal State
@@ -57,7 +58,7 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${userInfo?.token}` },
       };
 
-      // Fetch Alerts and Metrics in parallel for speed
+      // Fetch Alerts and Metrics in parallel
       const [alertsRes, metricsRes] = await Promise.all([
         axios.get("http://localhost:5000/api/inventory/alerts", config),
         axios.get("http://localhost:5000/api/analytics/metrics", config),
@@ -68,7 +69,6 @@ const AdminDashboard = () => {
       setLoading(false);
     } catch (err) {
       console.error("Dashboard Sync Failed:", err);
-      // Even if fetch fails, stop loading so UI doesn't freeze
       setLoading(false);
     }
   }, []);
@@ -80,7 +80,7 @@ const AdminDashboard = () => {
   // --- HANDLERS ---
   const openRestockModal = (item) => {
     setSelectedItem(item);
-    setRestockAmount(500); // Reset to default
+    setRestockAmount(500);
     setIsModalOpen(true);
   };
 
@@ -102,29 +102,19 @@ const AdminDashboard = () => {
       await axios.put(
         `http://localhost:5000/api/inventory/${selectedItem._id}/restock`,
         { amount: parseInt(restockAmount) },
-        config
+        config,
       );
 
       alert(`${selectedItem.name} restocked successfully!`);
       closeRestockModal();
-      fetchDashboardData(); // Live refresh of data
+      fetchDashboardData(); // Live refresh
     } catch (err) {
       console.error(err);
-      alert("Failed to restock item. Please check server connection.");
+      alert("Failed to restock item.");
     }
   };
 
-  // --- STATIC FALLBACK DATA (For Line Chart Only) ---
-  const salesData = [
-    { name: "Jul", sales: 400000, profit: 80000 },
-    { name: "Aug", sales: 450000, profit: 95000 },
-    { name: "Sep", sales: 520000, profit: 105000 },
-    { name: "Oct", sales: 500000, profit: 100000 },
-    { name: "Nov", sales: 600000, profit: 120000 },
-    { name: "Dec", sales: 750000, profit: 150000 },
-  ];
-
-  // Fallback in case DB is empty, so chart doesn't look broken
+  // Fallback data for Bar Chart if DB is empty
   const inventoryFallback = [{ name: "No Data", quantity: 0 }];
 
   const recentOrders = [
@@ -239,7 +229,6 @@ const AdminDashboard = () => {
         <div className="dashboard-grid inventory-stats">
           <div className="stat-card">
             <p>Total Sales</p>
-            {/* Safe check for NaN */}
             <h2>PKR {((metrics.totalSales || 0) / 1000000).toFixed(1)}M</h2>
           </div>
           <div className="stat-card">
@@ -256,9 +245,9 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* 4. CHARTS SECTION */}
+        {/* 4. CHARTS SECTION (This is where your code went!) */}
         <div className="dashboard-grid">
-          {/* Sales Line Chart */}
+          {/* SALES LINE CHART (New Dynamic Version) */}
           <div className="card chart-box" style={{ flex: 2 }}>
             <h3>
               <FaChartLine /> Sales & Profit Trend
@@ -266,7 +255,10 @@ const AdminDashboard = () => {
             <div style={{ width: "100%", height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                  data={salesData}
+                  /* USE LIVE DATA HERE */
+                  data={
+                    metrics.salesTrend?.length > 0 ? metrics.salesTrend : []
+                  }
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -288,6 +280,7 @@ const AdminDashboard = () => {
                     yAxisId="left"
                     type="monotone"
                     dataKey="sales"
+                    name="Sales"
                     stroke="#3e5235"
                     strokeWidth={2}
                   />
@@ -295,15 +288,29 @@ const AdminDashboard = () => {
                     yAxisId="right"
                     type="monotone"
                     dataKey="profit"
+                    name="Profit (Est)"
                     stroke="#8c734b"
                     strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
+
+              {/* Message if no data exists yet */}
+              {metrics.salesTrend?.length === 0 && (
+                <p
+                  style={{
+                    textAlign: "center",
+                    color: "#999",
+                    marginTop: "-150px",
+                  }}
+                >
+                  No sales data recorded yet.
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Map Placeholder */}
+          {/* MAP PLACEHOLDER */}
           <div className="card chart-box" style={{ flex: 1 }}>
             <h3>
               <FaTruck /> Live Operations Map

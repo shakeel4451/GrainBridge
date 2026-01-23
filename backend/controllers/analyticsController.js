@@ -75,7 +75,7 @@ const getMarketInsights = async (req, res) => {
  */
 const getDashboardMetrics = async (req, res) => {
   try {
-    // 1. Total Sales: Including all variations of successful/delivered statuses
+    // 1. Total Sales
     const salesData = await Order.aggregate([
       {
         $match: {
@@ -100,20 +100,62 @@ const getDashboardMetrics = async (req, res) => {
     // 4. Inventory Distribution (For your Bar Chart)
     // Fetches the name and quantity of every item in your collection
     const distribution = await Inventory.find({}).select("name quantity -_id");
+    // 5. SALES TREND (NEW: Last 6 Months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const trendData = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ["Success", "success", "Delivered", "delivered"] },
+          createdAt: { $gte: sixMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          },
+          totalSales: { $sum: "$totalAmount" },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }, // Sort chronologically
+    ]);
+
+    // Format Data for Recharts (Convert month number 1 -> "Jan")
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    const formattedTrend = trendData.map((item) => ({
+      name: monthNames[item._id.month - 1], // MongoDB months are 1-based
+      sales: item.totalSales,
+      profit: Math.round(item.totalSales * 0.2), // Estimating 20% Profit Margin
+    }));
 
     res.json({
       totalSales: salesData.length > 0 ? salesData[0].total : 0,
       activeOrders: activeOrdersCount || 0,
       totalInventory: inventoryData.length > 0 ? inventoryData[0].totalBags : 0,
       millingEfficiency: 98.5,
-      inventoryDistribution: distribution.length > 0 ? distribution : [],
+      inventoryDistribution: distribution || [],
+      salesTrend: formattedTrend, // Send the new trend data!
     });
   } catch (error) {
-    console.error("DASHBOARD METRICS ERROR:", error.message);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    console.error("METRICS ERROR:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 

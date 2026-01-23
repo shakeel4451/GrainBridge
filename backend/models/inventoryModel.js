@@ -6,8 +6,9 @@ const inventorySchema = mongoose.Schema(
     quantity: { type: Number, required: true },
     category: { type: String, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Inventory = mongoose.model("Inventory", inventorySchema);
-module.exports = Inventory;
+module.exports =
+  mongoose.models.Inventory || mongoose.model("Inventory", inventorySchema);
