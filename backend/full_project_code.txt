@@ -1,0 +1,1373 @@
+
+
+// ==========================================
+// FILE: controllers\analyticsController.js
+// ==========================================
+
+const Order = require("../models/orderModel");
+const Inventory = require("../models/inventoryModel");
+
+/**
+ * @desc    Get Market Insights (Growth & Recommendations)
+ * @route   GET /api/analytics/market-insights
+ */
+const getMarketInsights = async (req, res) => {
+  try {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    // Filter to exclude any variation of "Cancelled"
+    const exclusionFilter = {
+      $nin: ["Cancelled", "cancelled", "Canceled", "canceled"],
+    };
+
+    // 1. Calculate Current Month Sales Volume
+    const currentSales = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: currentMonthStart },
+          status: exclusionFilter,
+        },
+      },
+      { $group: { _id: null, totalVolume: { $sum: "$totalAmount" } } },
+    ]);
+
+    // 2. Calculate Last Month Sales Volume
+    const lastMonthSales = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: lastMonthStart, $lt: currentMonthStart },
+          status: exclusionFilter,
+        },
+      },
+      { $group: { _id: null, totalVolume: { $sum: "$totalAmount" } } },
+    ]);
+
+    const currentVol = currentSales[0]?.totalVolume || 0;
+    const prevVol = lastMonthSales[0]?.totalVolume || 0;
+
+    // 3. Calculate Growth Percentage
+    // Formula: $Growth = \frac{Current - Previous}{Previous} \times 100$
+    let growth = 0;
+    if (prevVol > 0) {
+      growth = ((currentVol - prevVol) / prevVol) * 100;
+    }
+
+    let recommendation = "Maintain current stock levels.";
+    if (growth > 5) {
+      recommendation =
+        "Demand is rising. Secure additional supply contracts for Basmati varieties.";
+    } else if (growth < -5) {
+      recommendation =
+        "Demand is cooling. Consider promotional discounts for bulk buyers.";
+    }
+
+    res.json({
+      forecast: `Market demand has ${
+        growth >= 0 ? "INCREASED" : "DECREASED"
+      } by ${Math.abs(growth).toFixed(1)}%`,
+      recommendation,
+      growth: growth.toFixed(1),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Analytics calculation failed" });
+  }
+};
+
+/**
+ * @desc    Get Top Stats (Total Sales, Active Orders, etc.)
+ * @route   GET /api/analytics/metrics
+ */
+const getDashboardMetrics = async (req, res) => {
+  try {
+    // 1. Total Sales
+    const salesData = await Order.aggregate([
+      {
+        $match: {
+          status: {
+            $in: ["Success", "success", "Delivered", "delivered", "Shipped"],
+          },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+    ]);
+
+    // 2. Active Orders: Including your "Pending" status and "Processing"
+    const activeOrdersCount = await Order.countDocuments({
+      status: { $in: ["Pending", "pending", "Processing", "processing"] },
+    });
+
+    // 3. Total Inventory: Sum of all bags across all varieties
+    const inventoryData = await Inventory.aggregate([
+      { $group: { _id: null, totalBags: { $sum: "$quantity" } } },
+    ]);
+
+    // 4. Inventory Distribution (For your Bar Chart)
+    // Fetches the name and quantity of every item in your collection
+    const distribution = await Inventory.find({}).select("name quantity -_id");
+    // 5. SALES TREND (NEW: Last 6 Months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const trendData = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ["Success", "success", "Delivered", "delivered"] },
+          createdAt: { $gte: sixMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          },
+          totalSales: { $sum: "$totalAmount" },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }, // Sort chronologically
+    ]);
+
+    // Format Data for Recharts (Convert month number 1 -> "Jan")
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    const formattedTrend = trendData.map((item) => ({
+      name: monthNames[item._id.month - 1], // MongoDB months are 1-based
+      sales: item.totalSales,
+      profit: Math.round(item.totalSales * 0.2), // Estimating 20% Profit Margin
+    }));
+
+    res.json({
+      totalSales: salesData.length > 0 ? salesData[0].total : 0,
+      activeOrders: activeOrdersCount || 0,
+      totalInventory: inventoryData.length > 0 ? inventoryData[0].totalBags : 0,
+      millingEfficiency: 98.5,
+      inventoryDistribution: distribution || [],
+      salesTrend: formattedTrend, // Send the new trend data!
+    });
+  } catch (error) {
+    console.error("METRICS ERROR:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+module.exports = { getMarketInsights, getDashboardMetrics };
+
+
+// ==========================================
+// FILE: controllers\authController.js
+// ==========================================
+
+// backend/controllers/authController.js
+
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+// --- Helper function to generate a JWT token ---
+const generateToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+    expiresIn: "7d", // Token expires in 7 days
+  });
+};
+
+// @desc    Register a new user
+// @route   POST /api/auth/register
+// @access  Public
+exports.registerUser = async (req, res) => {
+  const { name, email, password, role, companyName, phone, address } = req.body;
+
+  try {
+    // 1. Check if user already exists
+    const userExists = await User.findOne({ email });
+
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // 2. Hash Password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 3. Create User
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      companyName,
+      phone,
+      address,
+    });
+
+    // 4. Respond with token and user details
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        companyName: user.companyName,
+        phone: user.phone,
+        address: user.address,
+        token: generateToken(user._id, user.role),
+      });
+    } else {
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error during registration" });
+  }
+};
+
+// @desc    Authenticate user & get token
+// @route   POST /api/auth/login
+// @access  Public
+exports.loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // 1. Check for user email
+    const user = await User.findOne({ email });
+
+    if (user && (await bcrypt.compare(password, user.password))) {
+      // 2. Passwords match, return token
+      res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        companyName: user.companyName,
+        phone: user.phone,
+        address: user.address,
+        token: generateToken(user._id, user.role),
+      });
+    } else {
+      // 3. Invalid credentials
+      res.status(401).json({ message: "Invalid email or password" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error during login" });
+  }
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (user) {
+      user.name = req.body.name || user.name;
+      user.email = req.body.email || user.email;
+      user.phone = req.body.phone || user.phone;
+      user.address = req.body.address || user.address;
+      user.companyName = req.body.companyName || user.companyName;
+
+      // Only hash password if it's being sent for update
+      if (req.body.password) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(req.body.password, salt);
+      }
+
+      const updatedUser = await user.save();
+
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        companyName: updatedUser.companyName,
+        phone: updatedUser.phone,
+        address: updatedUser.address,
+        token: generateToken(updatedUser._id, updatedUser.role),
+      });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Profile update failed" });
+  }
+};
+
+// @desc    Get all users (Used by Admin to see Suppliers/Customers)
+// @route   GET /api/auth/users
+// @access  Private/Admin
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).select("-password"); // Exclude passwords for security
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching users" });
+  }
+};
+
+
+// ==========================================
+// FILE: controllers\inventoryController.js
+// ==========================================
+
+const Inventory = require("../models/inventoryModel");
+
+// @desc    Get all inventory items
+// @route   GET /api/inventory
+// @access  Private (Everyone)
+const getInventory = async (req, res) => {
+  try {
+    const items = await Inventory.find({});
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error fetching inventory" });
+  }
+};
+
+// @desc    Create a new inventory item
+// @route   POST /api/inventory
+// @access  Private (Admin Only)
+const createInventoryItem = async (req, res) => {
+  const { name, category, quantity, pricePerBag, supplier } = req.body;
+
+  try {
+    const item = new Inventory({
+      name,
+      category,
+      quantity,
+      pricePerBag,
+      supplier,
+    });
+
+    const createdItem = await item.save();
+    res.status(201).json(createdItem);
+  } catch (error) {
+    res.status(400).json({ message: "Invalid inventory data" });
+  }
+};
+
+// @desc    Get all items below threshold
+// @route   GET /api/inventory/alerts
+// @access  Private (Admin Only)
+const getStockAlerts = async (req, res) => {
+  try {
+    // Alert if stock is below 100 bags
+    const alerts = await Inventory.find({ quantity: { $lt: 100 } });
+    res.json({ alerts });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// @desc    Restock an item
+// @route   PUT /api/inventory/:id/restock
+// @access  Private (Admin Only)
+const restockItem = async (req, res) => {
+  try {
+    const item = await Inventory.findById(req.params.id);
+
+    if (item) {
+      item.quantity += Number(req.body.amount);
+      const updatedItem = await item.save();
+      res.json(updatedItem);
+    } else {
+      res.status(404).json({ message: "Item not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// IMPORTANT: Make sure all 4 functions are in this object
+module.exports = {
+  getInventory,
+  createInventoryItem,
+  getStockAlerts,
+  restockItem,
+};
+
+
+// ==========================================
+// FILE: controllers\orderController.js
+// ==========================================
+
+// 1. Correct Imports (Must match your file names)
+const Order = require("../models/orderModel");
+const Inventory = require("../models/inventoryModel"); // Changed from Product to Inventory
+
+// @desc    Get orders (Admin sees all, Customer sees theirs)
+// @route   GET /api/orders
+// @access  Private
+const getOrders = async (req, res) => {
+  try {
+    let query = {};
+    // If not Admin, only show their own orders
+    if (req.user.role !== "Admin") {
+      query = { customer: req.user._id };
+    }
+
+    const orders = await Order.find(query)
+      .populate("customer", "name email")
+      .sort("-createdAt");
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    res.status(500).json({ message: "Server error fetching orders" });
+  }
+};
+
+// @desc    Create a new order & update inventory
+// @route   POST /api/orders
+// @access  Private/Customer
+const createOrder = async (req, res) => {
+  const { items, totalAmount, shippingAddress } = req.body;
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ message: "No items in order" });
+  }
+
+  try {
+    // 1. Check stock availability FIRST
+    for (const item of items) {
+      const product = await Inventory.findById(item.product);
+
+      if (!product) {
+        return res
+          .status(404)
+          .json({ message: `Product not found ID: ${item.product}` });
+      }
+
+      // FIX: Use 'quantity' (from your DB), not 'currentStock'
+      if (product.quantity < item.quantity) {
+        return res.status(400).json({
+          message: `Insufficient stock for ${product.name}. Available: ${product.quantity}`,
+        });
+      }
+    }
+
+    // 2. Create the order
+    const order = await Order.create({
+      customer: req.user._id,
+      items,
+      totalAmount,
+      shippingAddress,
+      status: "Pending",
+    });
+
+    // 3. Deduct stock from Inventory
+    for (const item of items) {
+      await Inventory.findByIdAndUpdate(item.product, {
+        $inc: { quantity: -item.quantity }, // FIX: Using 'quantity'
+      });
+    }
+
+    res.status(201).json(order);
+  } catch (error) {
+    console.error("Order Creation Error:", error);
+    res.status(400).json({ message: "Invalid order data or server error" });
+  }
+};
+
+// @desc    Update order status
+// @route   PUT /api/orders/:id/status
+// @access  Private/Admin
+const updateOrderStatus = async (req, res) => {
+  const { status } = req.body;
+  try {
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true },
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    res.status(200).json(order);
+  } catch (error) {
+    res.status(400).json({ message: "Invalid status update data" });
+  }
+};
+
+// IMPORTANT: This export structure matches your routes
+module.exports = {
+  getOrders,
+  createOrder,
+  updateOrderStatus,
+};
+
+
+// ==========================================
+// FILE: controllers\productController.js
+// ==========================================
+
+// backend/controllers/productController.js
+
+const Product = require("../models/Product");
+
+// @desc    Get all products
+// @route   GET /api/products
+// @access  Private/Admin, Supplier
+exports.getProducts = async (req, res) => {
+  try {
+    const products = await Product.find({});
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: "Server error fetching products" });
+  }
+};
+
+// @desc    Create a new product
+// @route   POST /api/products
+// @access  Private/Admin
+exports.createProduct = async (req, res) => {
+  try {
+    const product = await Product.create(req.body);
+    res.status(201).json(product);
+  } catch (error) {
+    res.status(400).json({ message: "Invalid product data" });
+  }
+};
+
+// @desc    Update a product
+// @route   PUT /api/products/:id
+// @access  Private/Admin
+exports.updateProduct = async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    res.status(200).json(product);
+  } catch (error) {
+    res.status(400).json({ message: "Invalid update data" });
+  }
+};
+// Add deleteProduct and getProductById as needed
+// @desc    Delete a product
+// @route   DELETE /api/products/:id
+// @access  Private/Admin
+exports.deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (product) {
+      await product.deleteOne();
+      res.json({ message: "Product removed" });
+    } else {
+      res.status(404).json({ message: "Product not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server error during deletion" });
+  }
+};
+
+
+// ==========================================
+// FILE: middleware\authMiddleware.js
+// ==========================================
+
+// backend/middleware/authMiddleware.js
+
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+
+const protect = async (req, res, next) => {
+  let token;
+
+  // Check for token in the 'Authorization' header
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    try {
+      // Get token from header (format is 'Bearer [token]')
+      token = req.headers.authorization.split(" ")[1];
+
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Attach the user (excluding password) to the request object
+      req.user = await User.findById(decoded.id).select("-password");
+
+      // Proceed to the next middleware or route handler
+      next();
+    } catch (error) {
+      console.error(error);
+      res.status(401).json({ message: "Not authorized, token failed" });
+    }
+  }
+
+  if (!token) {
+    res.status(401).json({ message: "Not authorized, no token" });
+  }
+};
+
+// Middleware to restrict access based on user role
+const restrictTo = (roles) => (req, res, next) => {
+  if (!roles.includes(req.user.role)) {
+    return res.status(403).json({
+      message: `User role ${req.user.role} is not authorized to access this route.`,
+    });
+  }
+  next();
+};
+
+module.exports = { protect, restrictTo };
+
+
+// ==========================================
+// FILE: models\inventoryModel.js
+// ==========================================
+
+const mongoose = require("mongoose");
+
+const inventorySchema = mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    category: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+
+const Inventory = mongoose.model("Inventory", inventorySchema);
+module.exports =
+  mongoose.models.Inventory || mongoose.model("Inventory", inventorySchema);
+
+
+// ==========================================
+// FILE: models\Order.js
+// ==========================================
+
+// backend/models/Order.js
+
+const mongoose = require("mongoose");
+
+const OrderSchema = new mongoose.Schema(
+  {
+    customer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Links to the User model
+      required: true,
+    },
+    items: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product", // Links to the Product model
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        priceAtOrder: {
+          // Price recorded at the time of order
+          type: Number,
+          required: true,
+        },
+      },
+    ],
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    status: {
+      type: String,
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      default: "Pending",
+    },
+    shippingAddress: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("Order", OrderSchema);
+
+
+// ==========================================
+// FILE: models\orderModel.js
+// ==========================================
+
+const mongoose = require("mongoose");
+
+const orderSchema = mongoose.Schema(
+  {
+    customer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Ensures this links to your User collection
+      required: true,
+    },
+    items: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Inventory", // Links to your Inventory
+          required: true,
+        },
+        quantity: { type: Number, required: true },
+        priceAtOrder: { type: Number, required: true },
+      },
+    ],
+    totalAmount: {
+      type: Number,
+      required: true,
+      default: 0.0,
+    },
+    status: {
+      type: String,
+      required: true,
+      default: "Pending", // Default status
+    },
+    shippingAddress: {
+      type: String,
+      required: false,
+    },
+  },
+  {
+    timestamps: true, // Automatically adds createdAt and updatedAt
+  },
+);
+
+// CRITICAL FIX: Direct export for CommonJS
+module.exports = mongoose.models.Order || mongoose.model("Order", orderSchema);
+
+
+// ==========================================
+// FILE: models\Product.js
+// ==========================================
+
+const mongoose = require("mongoose");
+
+const productSchema = new mongoose.Schema(
+  {
+    name: { 
+        type: String, 
+        required: true 
+    },
+    sku: { 
+        type: String, 
+        required: true, 
+        unique: true 
+    },
+    category: { 
+        type: String, 
+        required: true,
+        enum: ["Basmati", "Healthy", "Economy", "Sella", "Kainat"] // Added allowed categories
+    },
+    currentStock: { 
+        type: Number, 
+        required: true, 
+        default: 0 
+    },
+    pricePerBag: { 
+        type: Number, 
+        required: true 
+    },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Product", productSchema);
+
+// ==========================================
+// FILE: models\User.js
+// ==========================================
+
+// backend/models/User.js
+
+const mongoose = require("mongoose");
+
+const UserSchema = new mongoose.Schema(
+  {
+    // Authentication Fields
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+
+    // User Type / Role
+    role: {
+      type: String,
+      enum: ["Admin", "Customer", "Supplier"],
+      required: true,
+    },
+
+    // Company/Personal Details
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    companyName: {
+      type: String,
+      trim: true,
+      // Only required for Customer and Supplier roles
+      required: function () {
+        return this.role === "Customer" || this.role === "Supplier";
+      },
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    address: {
+      type: String,
+      trim: true,
+    },
+  },
+  {
+    timestamps: true, // Adds createdAt and updatedAt timestamps
+  },
+);
+
+module.exports = mongoose.models.User || mongoose.model("User", UserSchema);
+
+
+// ==========================================
+// FILE: package.json
+// ==========================================
+
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "data:import": "node seedProducts.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "colors": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
+
+
+// ==========================================
+// FILE: routes\analyticsRoutes.js
+// ==========================================
+
+// backend/routes/analyticsRoutes.js
+const express = require("express");
+const router = express.Router();
+const {
+  getMarketInsights,
+  getDashboardMetrics,
+} = require("../controllers/analyticsController");
+const { protect, restrictTo } = require("../middleware/authMiddleware");
+
+// Route for Growth Trends (The code you provided)
+router.get(
+  "/market-insights",
+  protect,
+  restrictTo(["Admin"]),
+  getMarketInsights
+);
+
+// Route for Top Dashboard Cards
+router.get("/metrics", protect, restrictTo(["Admin"]), getDashboardMetrics);
+
+module.exports = router;
+
+
+// ==========================================
+// FILE: routes\authRoutes.js
+// ==========================================
+
+// backend/routes/authRoutes.js
+
+const express = require("express");
+const router = express.Router();
+const {
+  registerUser,
+  loginUser,
+  updateUserProfile,
+  getUsers,
+} = require("../controllers/authController");
+
+// Import the protect middleware to ensure only logged-in users can access certain routes
+const { protect } = require("../middleware/authMiddleware");
+
+// --- Public Routes ---
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+
+// --- Private Routes (Require Token) ---
+// Route for a user to update their own profile (Customer/Supplier/Admin)
+router.put("/profile", protect, updateUserProfile);
+
+// Route for Admin to fetch all users (used for Supplier/Customer management)
+router.get("/users", protect, getUsers);
+
+module.exports = router;
+
+
+// ==========================================
+// FILE: routes\inventoryRoutes.js
+// ==========================================
+
+const express = require("express");
+const router = express.Router();
+
+// 1. UPDATE IMPORTS: Add 'getInventory' and 'createInventoryItem'
+const {
+  getInventory, // <--- Needed for Customer Dashboard
+  createInventoryItem, // <--- Needed for Admin to add items
+  getStockAlerts,
+  restockItem,
+} = require("../controllers/inventoryController");
+
+const { protect, restrictTo } = require("../middleware/authMiddleware");
+
+// --- 2. MAIN INVENTORY ROUTES (The Missing Part) ---
+router
+  .route("/")
+  .get(protect, getInventory) // ✅ OPEN: Customers can now see products
+  .post(protect, restrictTo(["Admin"]), createInventoryItem); // 🔒 ADMIN ONLY
+
+// --- 3. ADMIN SPECIFIC ROUTES ---
+router.get("/alerts", protect, restrictTo(["Admin"]), getStockAlerts);
+router.put("/:id/restock", protect, restrictTo(["Admin"]), restockItem);
+
+module.exports = router;
+
+
+// ==========================================
+// FILE: routes\orderRoutes.js
+// ==========================================
+
+// backend/routes/orderRoutes.js
+const express = require("express");
+const router = express.Router();
+const {
+  getOrders,
+  createOrder,
+  updateOrderStatus,
+} = require("../controllers/orderController");
+const { protect, restrictTo } = require("../middleware/authMiddleware");
+
+// 1. General Order Routes
+router
+  .route("/")
+  .get(protect, getOrders) // Admin gets all, Customer/Supplier get their own (logic is inside controller)
+  .post(protect, restrictTo(["Customer"]), createOrder); // Only Customers can place orders
+
+// 2. Admin Specific Route (Status Updates)
+router
+  .route("/:id/status")
+  .put(protect, restrictTo(["Admin"]), updateOrderStatus);
+
+module.exports = router;
+
+
+// ==========================================
+// FILE: routes\productRoutes.js
+// ==========================================
+
+// backend/routes/productRoutes.js
+
+const express = require("express");
+const {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct, // 1. Added the delete controller import
+} = require("../controllers/productController");
+const { protect, restrictTo } = require("../middleware/authMiddleware");
+
+const router = express.Router();
+
+/**
+ * @route   /api/products
+ * @desc    Get all products or create a new one
+ * @access  Private
+ */
+router
+  .route("/")
+  .get(protect, restrictTo(["Admin", "Supplier", "Customer"]), getProducts)
+  .post(protect, restrictTo(["Admin"]), createProduct);
+
+/**
+ * @route   /api/products/:id
+ * @desc    Update or Delete a specific product
+ * @access  Private (Admin Only)
+ */
+router
+  .route("/:id")
+  .put(protect, restrictTo(["Admin"]), updateProduct)
+  .delete(protect, restrictTo(["Admin"]), deleteProduct); // 2. Added the DELETE route
+
+module.exports = router;
+
+
+// ==========================================
+// FILE: seeder.js
+// ==========================================
+
+// backend/seeder.js
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const colors = require("colors");
+const User = require("./models/User");
+const Inventory = require("./models/inventoryModel");
+const Order = require("./models/orderModel");
+
+dotenv.config();
+
+// --- CONFIGURATION ---
+// Ensure this matches your .env file
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/ricemill";
+
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(MONGO_URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`.cyan.underline);
+  } catch (error) {
+    console.error(`Error: ${error.message}`.red.underline.bold);
+    process.exit(1);
+  }
+};
+
+const importData = async () => {
+  try {
+    await connectDB();
+
+    console.log("🧹 Clearing old data...".yellow);
+    await Order.deleteMany();
+    await Inventory.deleteMany();
+    // Note: We are NOT deleting Users so you don't lose your Admin login.
+
+    console.log("🌱 Seeding Inventory...".magenta);
+    // Create Standard Inventory
+    const inventoryItems = await Inventory.insertMany([
+      {
+        name: "Super Basmati",
+        category: "Basmati",
+        quantity: 15000,
+        pricePerBag: 5000,
+        supplier: "Supplier Alpha",
+      },
+      {
+        name: "Kainat 1121",
+        category: "Basmati",
+        quantity: 8000,
+        pricePerBag: 4800,
+        supplier: "Global Grains",
+      },
+      {
+        name: "Irri-6",
+        category: "Non-Basmati",
+        quantity: 25000,
+        pricePerBag: 3200,
+        supplier: "Local Farmers",
+      },
+      {
+        name: "Brown Rice",
+        category: "Organic",
+        quantity: 3500,
+        pricePerBag: 6000,
+        supplier: "Organic Farms Ltd",
+      },
+      {
+        name: "Broken Rice",
+        category: "Feed",
+        quantity: 12000,
+        pricePerBag: 2500,
+        supplier: "Mill Output",
+      },
+    ]);
+
+    // We need a valid user ID for orders (just picking the first one found or creating a dummy ID)
+    let adminUser = await User.findOne({ role: "Admin" });
+    if (!adminUser) {
+      // Fallback if no admin exists
+      console.log(
+        "⚠️ No Admin found, using dummy ID (Charts will work, but Order links might not)"
+          .gray,
+      );
+      adminUser = { _id: new mongoose.Types.ObjectId() };
+    }
+
+    console.log("📈 Seeding 6 Months of Orders...".green);
+
+    const orders = [];
+    const statuses = [
+      "Success",
+      "Pending",
+      "Processing",
+      "Delivered",
+      "Cancelled",
+    ];
+    const customers = [
+      "Global Foods Inc",
+      "Lahore Retailers",
+      "Karachi Mart",
+      "Asian Exporters",
+      "Daily Fresh",
+    ];
+
+    // Generate 50 realistic orders
+    for (let i = 0; i < 50; i++) {
+      // Random Date within last 6 months
+      const date = new Date();
+      date.setMonth(date.getMonth() - Math.floor(Math.random() * 6));
+      date.setDate(Math.floor(Math.random() * 28) + 1);
+
+      // Random Amount (between 50k and 500k)
+      const amount = Math.floor(Math.random() * 450000) + 50000;
+
+      // Random Status (Weighted towards Success)
+      const status =
+        Math.random() > 0.3
+          ? "Success"
+          : statuses[Math.floor(Math.random() * statuses.length)];
+
+      orders.push({
+        customer: adminUser._id, // Assigning to admin for simplicity
+        shippingAddress: "123 Seeded Data St, Lahore",
+        items: [
+          {
+            product: inventoryItems[0]._id, // Just linking to first inventory item
+            quantity: Math.floor(amount / 5000),
+            priceAtOrder: 5000,
+          },
+        ],
+        totalAmount: amount,
+        status: status,
+        createdAt: date, // Crucial for Line Chart
+        updatedAt: date,
+      });
+    }
+
+    await Order.insertMany(orders);
+
+    console.log("✅ Data Imported Successfully!".green.inverse);
+    process.exit();
+  } catch (error) {
+    console.error(`${error}`.red.inverse);
+    process.exit(1);
+  }
+};
+
+const destroyData = async () => {
+  try {
+    await connectDB();
+    await Order.deleteMany();
+    await Inventory.deleteMany();
+
+    console.log("🔴 Data Destroyed!".red.inverse);
+    process.exit();
+  } catch (error) {
+    console.error(`${error}`.red.inverse);
+    process.exit(1);
+  }
+};
+
+// Check command line arguments to decide action
+if (process.argv[2] === "-d") {
+  destroyData();
+} else {
+  importData();
+}
+
+
+// ==========================================
+// FILE: seedProducts.js
+// ==========================================
+
+// backend/seedProducts.js
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const Product = require("./models/Product");
+
+dotenv.config();
+
+const products = [
+  {
+    name: "Premium Basmati Rice",
+    sku: "BSM-EXP-01",
+    category: "Basmati",
+    pricePerBag: 4500,
+    currentStock: 500,
+  },
+  {
+    name: "Super Kernel Basmati",
+    sku: "SKB-002",
+    category: "Basmati",
+    pricePerBag: 3800,
+    currentStock: 1200,
+  },
+  {
+    name: "Organic Brown Rice",
+    sku: "BRN-003",
+    category: "Healthy",
+    pricePerBag: 5200,
+    currentStock: 250,
+  },
+  {
+    name: "Premium Sella Rice",
+    sku: "SEL-004",
+    category: "Basmati",
+    pricePerBag: 4200,
+    currentStock: 800,
+  },
+  {
+    name: "Broken Rice (Totah)",
+    sku: "TOT-005",
+    category: "Economy",
+    pricePerBag: 2000,
+    currentStock: 1500,
+  },
+  {
+    name: "Irri-6 Economy Rice",
+    sku: "IR6-006",
+    category: "Economy",
+    pricePerBag: 1800,
+    currentStock: 5000,
+  },
+  {
+    name: "Kainat 1121",
+    sku: "KNT-007",
+    category: "Basmati",
+    pricePerBag: 4000,
+    currentStock: 600,
+  },
+  {
+    name: "Jasmine Rice",
+    sku: "JAS-008",
+    category: "Basmati",
+    pricePerBag: 4800,
+    currentStock: 300,
+  }
+];
+
+const seedDatabase = async () => {
+  try {
+    console.log("Connecting to MongoDB...");
+    await mongoose.connect(process.env.MONGO_URI);
+    
+    // Clear existing products
+    await Product.deleteMany();
+    console.log("Existing products cleared...");
+
+    // Insert new products
+    await Product.insertMany(products);
+    console.log("Database Seeded Successfully! 🌱");
+    
+    process.exit();
+  } catch (error) {
+    console.error("Error seeding database:", error);
+    process.exit(1);
+  }
+};
+
+seedDatabase();
+
+// ==========================================
+// FILE: server.js
+// ==========================================
+
+// backend/server.js (UPDATED WITH INVENTORY)
+
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+require("dotenv").config();
+
+// --- 1. Import all Routes ---
+const authRoutes = require("./routes/authRoutes");
+const productRoutes = require("./routes/productRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI;
+
+// Middleware
+app.use(express.json());
+app.use(cors());
+
+// Database Connection
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log("MongoDB connected successfully!"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// Basic Route Test
+app.get("/", (req, res) => {
+  res.send("Rice ERP Backend is running!");
+});
+
+// --- 2. Use Routes ---
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/analytics", analyticsRoutes);
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode);
+  res.json({
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+  });
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

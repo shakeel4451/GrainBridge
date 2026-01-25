@@ -69,6 +69,42 @@ const importData = async () => {
         pricePerBag: 2500,
         supplier: "Mill Output",
       },
+      // --- NEW ITEMS ---
+      {
+        name: "Jasmine Rice",
+        category: "Basmati",
+        quantity: 5000,
+        pricePerBag: 5500,
+        supplier: "Import Co.",
+      },
+      {
+        name: "Parboiled Sella",
+        category: "Sella",
+        quantity: 10000,
+        pricePerBag: 4200,
+        supplier: "Golden Grains",
+      },
+      {
+        name: "Red Rice",
+        category: "Healthy",
+        quantity: 2000,
+        pricePerBag: 7000,
+        supplier: "Nature Best",
+      },
+      {
+        name: "Supreme Kernel",
+        category: "Basmati",
+        quantity: 6000,
+        pricePerBag: 5100,
+        supplier: "Supplier Alpha",
+      },
+      {
+        name: "Rice Bran",
+        category: "Feed",
+        quantity: 20000,
+        pricePerBag: 1500,
+        supplier: "Mill Output",
+      },
     ]);
 
     // We need a valid user ID for orders (just picking the first one found or creating a dummy ID)

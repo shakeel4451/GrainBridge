@@ -7,10 +7,10 @@ require("dotenv").config();
 
 // --- 1. Import all Routes ---
 const authRoutes = require("./routes/authRoutes");
-const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const shipmentRoutes = require("./routes/shipmentRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,10 +33,10 @@ app.get("/", (req, res) => {
 
 // --- 2. Use Routes ---
 app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/shipments", shipmentRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

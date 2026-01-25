@@ -21,7 +21,6 @@ const CustomerSidebar = () => {
 
   const isLinkActive = (path) => location.pathname === path;
 
-  // Automatically close sidebar on route change (for mobile)
   useEffect(() => {
     setIsOpen(false);
   }, [location]);
@@ -34,12 +33,10 @@ const CustomerSidebar = () => {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
       <button className="mobile-menu-toggle" onClick={() => setIsOpen(true)}>
         <FaBars /> Menu
       </button>
 
-      {/* Sidebar Container */}
       <div className={`customer-sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
@@ -60,8 +57,9 @@ const CustomerSidebar = () => {
             </Link>
           </li>
 
-          <li className={isLinkActive("/products") ? "active" : ""}>
-            <Link to="/products">
+          {/* ✅ FIXED LINK: Points to Internal Order Page */}
+          <li className={isLinkActive("/customer/order") ? "active" : ""}>
+            <Link to="/customer/order">
               <FaShoppingCart /> Place New Order
             </Link>
           </li>
@@ -99,15 +97,12 @@ const CustomerSidebar = () => {
           </li>
         </ul>
 
-        {/* LOGOUT BUTTON */}
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
             <FaSignOutAlt /> Logout
           </button>
         </div>
       </div>
-
-      {/* Overlay for mobile */}
       {isOpen && (
         <div className="sidebar-overlay" onClick={() => setIsOpen(false)}></div>
       )}

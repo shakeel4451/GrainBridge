@@ -1,62 +1,75 @@
 const Inventory = require("../models/inventoryModel");
 
-/**
- * @desc    Get items below threshold (100 bags)
- * @route   GET /api/inventory/alerts
- * @access  Private/Admin
- */
-const getStockAlerts = async (req, res) => {
+// @desc    Get all inventory items
+// @route   GET /api/inventory
+// @access  Private (Everyone)
+const getInventory = async (req, res) => {
   try {
-    const threshold = 100;
-
-    // Find items where quantity is less than the threshold
-    const lowStockItems = await Inventory.find({
-      quantity: { $lt: threshold },
-    }).select("name quantity category");
-
-    res.json({
-      count: lowStockItems.length,
-      alerts: lowStockItems,
-      timestamp: new Date(),
-    });
+    const items = await Inventory.find({});
+    res.json(items);
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch stock alerts" });
+    res.status(500).json({ message: "Server Error fetching inventory" });
   }
 };
 
-/**
- * @desc    Update stock quantity (Restock)
- * @route   PUT /api/inventory/:id/restock
- * @access  Private/Admin
- */
+// @desc    Create a new inventory item
+// @route   POST /api/inventory
+// @access  Private (Admin Only)
+const createInventoryItem = async (req, res) => {
+  const { name, category, quantity, pricePerBag, supplier } = req.body;
+
+  try {
+    const item = new Inventory({
+      name,
+      category,
+      quantity,
+      pricePerBag,
+      supplier,
+    });
+
+    const createdItem = await item.save();
+    res.status(201).json(createdItem);
+  } catch (error) {
+    res.status(400).json({ message: "Invalid inventory data" });
+  }
+};
+
+// @desc    Get all items below threshold
+// @route   GET /api/inventory/alerts
+// @access  Private (Admin Only)
+const getStockAlerts = async (req, res) => {
+  try {
+    // Alert if stock is below 100 bags
+    const alerts = await Inventory.find({ quantity: { $lt: 100 } });
+    res.json({ alerts });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// @desc    Restock an item
+// @route   PUT /api/inventory/:id/restock
+// @access  Private (Admin Only)
 const restockItem = async (req, res) => {
   try {
-    const { amount } = req.body; // The number of bags to add
-
-    if (!amount || amount <= 0) {
-      return res
-        .status(400)
-        .json({ message: "Please provide a valid amount to restock." });
-    }
-
-    // Find the item by ID from the URL parameter
     const item = await Inventory.findById(req.params.id);
 
     if (item) {
-      // Use Number() to ensure mathematical addition, not string concatenation
-      item.quantity += Number(amount);
-
+      item.quantity += Number(req.body.amount);
       const updatedItem = await item.save();
-      res.json({
-        message: "Stock updated successfully",
-        updatedItem,
-      });
+      res.json(updatedItem);
     } else {
-      res.status(404).json({ message: "Inventory item not found" });
+      res.status(404).json({ message: "Item not found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Restock operation failed" });
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-module.exports = { getStockAlerts, restockItem };
+// IMPORTANT: Make sure all 4 functions are in this object
+module.exports = {
+  getInventory,
+  createInventoryItem,
+  getStockAlerts,
+  restockItem,
+};

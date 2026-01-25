@@ -5,51 +5,51 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+
+// Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AiChatbot from "./components/AiChatbot";
+
+// Public Pages
 import Home from "./pages/Home";
-import OurProcess from "./pages/OurProcess";
-import Contact from "./pages/Contact";
 import About from "./pages/About";
 import Products from "./pages/Products";
+import OurProcess from "./pages/OurProcess";
+import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-// Protection Component
-import ProtectedRoute from "./components/ProtectedRoute";
-
-// Portals (Dashboards)
+// Admin Pages
 import AdminDashboard from "./pages/AdminDashboard";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import SupplierDashboard from "./pages/SupplierDashboard";
-
-// Supplier Subpages
-import SupplierPayments from "./pages/SupplierPayments";
-import SupplierMarketRates from "./pages/SupplierMarketRates";
-import SupplierDemand from "./pages/SupplierDemand";
-import SupplierAIQuality from "./pages/SupplierAIQuality";
-import SupplierProfile from "./pages/SupplierProfile";
-import { SupplierSettings } from "./pages/PortalSettings";
-
-// Customer Subpages
-import CustomerHistory from "./pages/CustomerHistory";
-import CustomerTracking from "./pages/CustomerTracking";
-import Traceability from "./pages/Traceability";
-import CustomerProfile from "./pages/CustomerProfile";
-import { CustomerSettings } from "./pages/PortalSettings";
-
-// Admin Subpages
-import AdminInventory from "./pages/AdminInventory";
-import AdminSales from "./pages/AdminSales";
 import AdminOrders from "./pages/AdminOrders";
+import AdminSales from "./pages/AdminSales";
+import AdminInventory from "./pages/AdminInventory";
 import AdminMilling from "./pages/AdminMilling";
 import AdminCustomers from "./pages/AdminCustomers";
 import AdminSuppliers from "./pages/AdminSuppliers";
 import AdminReports from "./pages/AdminReports";
+import AdminShipments from "./pages/AdminShipments"; // ✅ Verified Import
 import { AdminSettings } from "./pages/PortalSettings";
 
-// AI Component
-import AiChatbot from "./components/AiChatbot";
+// Supplier Pages
+import SupplierDashboard from "./pages/SupplierDashboard";
+import SupplierDemand from "./pages/SupplierDemand";
+import SupplierPayments from "./pages/SupplierPayments";
+import SupplierMarketRates from "./pages/SupplierMarketRates";
+import SupplierAIQuality from "./pages/SupplierAIQuality";
+import SupplierProfile from "./pages/SupplierProfile";
+import { SupplierSettings } from "./pages/PortalSettings";
+
+// Customer Pages
+import CustomerOrder from "./pages/CustomerOrder";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import CustomerHistory from "./pages/CustomerHistory";
+import CustomerTracking from "./pages/CustomerTracking";
+import CustomerProfile from "./pages/CustomerProfile";
+import Traceability from "./pages/Traceability";
+import { CustomerSettings } from "./pages/PortalSettings";
 
 import "./App.css";
 
@@ -78,6 +78,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/shipments"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminShipments />
               </ProtectedRoute>
             }
           />
@@ -218,6 +226,14 @@ function App() {
             }
           />
           <Route
+            path="/customer/order"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerOrder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/customer/history"
             element={
               <ProtectedRoute allowedRoles={["Customer"]}>
@@ -258,7 +274,7 @@ function App() {
             }
           />
 
-          {/* Fallback */}
+          {/* Fallback Route */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <Footer />

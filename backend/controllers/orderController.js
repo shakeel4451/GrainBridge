@@ -1,26 +1,25 @@
-const Order = require("../models/Order");
-const Product = require("../models/Product"); // Changed from productModel to Product
+const Order = require("../models/orderModel");
+const Inventory = require("../models/inventoryModel");
 
-// @desc    Get orders for Admin or Customer/Supplier
+// @desc    Get orders (Admin sees all, Customer sees theirs)
 // @route   GET /api/orders
-// @access  Private/Admin, Customer, Supplier
-exports.getOrders = async (req, res) => {
+// @access  Private
+const getOrders = async (req, res) => {
   try {
     let query = {};
-    const role = req.user.role;
-
-    // Filter orders if not Admin
-    if (role !== "Admin") {
-      query = { customer: req.user.id };
+    // If not Admin, only show their own orders
+    if (req.user.role !== "Admin") {
+      query = { customer: req.user._id };
     }
 
     const orders = await Order.find(query)
-      .populate("customer", "name companyName")
-      .populate("items.product", "name sku")
+      .populate("customer", "name email") // Show customer details
+      .populate("items.product", "name category") // Show product details
       .sort("-createdAt");
 
     res.status(200).json(orders);
   } catch (error) {
+    console.error("Fetch Error:", error);
     res.status(500).json({ message: "Server error fetching orders" });
   }
 };
@@ -28,7 +27,7 @@ exports.getOrders = async (req, res) => {
 // @desc    Create a new order & update inventory
 // @route   POST /api/orders
 // @access  Private/Customer
-exports.createOrder = async (req, res) => {
+const createOrder = async (req, res) => {
   const { items, totalAmount, shippingAddress } = req.body;
 
   if (!items || items.length === 0) {
@@ -36,33 +35,36 @@ exports.createOrder = async (req, res) => {
   }
 
   try {
-    // 1. Check stock availability for all items first
+    // 1. Check stock availability FIRST
     for (const item of items) {
-      const product = await Product.findById(item.product);
+      const product = await Inventory.findById(item.product);
+
       if (!product) {
         return res
           .status(404)
           .json({ message: `Product not found ID: ${item.product}` });
       }
-      if (product.currentStock < item.quantity) {
+
+      if (product.quantity < item.quantity) {
         return res.status(400).json({
-          message: `Insufficient stock for ${product.name}. Available: ${product.currentStock}`,
+          message: `Insufficient stock for ${product.name}. Available: ${product.quantity}`,
         });
       }
     }
 
     // 2. Create the order
     const order = await Order.create({
-      customer: req.user.id,
+      customer: req.user._id,
       items,
       totalAmount,
       shippingAddress,
+      status: "Pending",
     });
 
     // 3. Deduct stock from Inventory
     for (const item of items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { currentStock: -item.quantity },
+      await Inventory.findByIdAndUpdate(item.product, {
+        $inc: { quantity: -item.quantity },
       });
     }
 
@@ -76,13 +78,13 @@ exports.createOrder = async (req, res) => {
 // @desc    Update order status
 // @route   PUT /api/orders/:id/status
 // @access  Private/Admin
-exports.updateOrderStatus = async (req, res) => {
+const updateOrderStatus = async (req, res) => {
   const { status } = req.body;
   try {
     const order = await Order.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { new: true },
     );
 
     if (!order) {
@@ -92,4 +94,10 @@ exports.updateOrderStatus = async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: "Invalid status update data" });
   }
+};
+
+module.exports = {
+  getOrders,
+  createOrder,
+  updateOrderStatus,
 };

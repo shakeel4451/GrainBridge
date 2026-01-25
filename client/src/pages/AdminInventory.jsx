@@ -2,102 +2,103 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
 import "./AdminInventory.css";
+import { API_BASE_URL } from "../config"; // Use the central config
 import {
   FaWarehouse,
   FaPlus,
   FaTrash,
   FaEdit,
-  FaBox,
   FaTimes,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 const AdminInventory = () => {
-  const [products, setProducts] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  // States for Add & Edit
+  // Modal & Form State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
-    sku: "",
     category: "Basmati",
-    currentStock: "",
+    quantity: "",
     pricePerBag: "",
+    supplier: "",
   });
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
 
-  const API_URL = "http://localhost:5000/api/products";
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
   const config = { headers: { Authorization: `Bearer ${userInfo?.token}` } };
 
-  const fetchProducts = async () => {
+  // 1. Fetch Inventory (The REAL Data)
+  const fetchInventory = async () => {
     try {
-      const { data } = await axios.get(API_URL, config);
-      setProducts(data);
+      const { data } = await axios.get(`${API_BASE_URL}/api/inventory`, config);
+      setItems(data);
       setLoading(false);
     } catch (err) {
-      setError("Failed to fetch inventory.");
+      console.error("Failed to fetch inventory", err);
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchInventory();
   }, []);
 
-  // ADD PRODUCT
-  const handleSubmit = async (e) => {
+  // 2. Add New Item
+  const handleAdd = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(API_URL, formData, config);
+      await axios.post(`${API_BASE_URL}/api/inventory`, formData, config);
+      alert("Item added successfully!");
       setFormData({
         name: "",
-        sku: "",
         category: "Basmati",
-        currentStock: "",
+        quantity: "",
         pricePerBag: "",
+        supplier: "",
       });
-      fetchProducts();
+      fetchInventory(); // Refresh list
     } catch (err) {
-      alert("Error adding product.");
+      alert("Failed to add item.");
     }
   };
 
-  // OPEN EDIT MODAL
-  const openEditModal = (product) => {
-    setEditingProduct(product);
-    setIsEditModalOpen(true);
-  };
-
-  // UPDATE PRODUCT
+  // 3. Update Item (Restock or Price Change)
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
+      // We use the "restock" route or build a general update route.
+      // For simplicity, let's assume we are updating stock/price.
+      // Note: You might need to add a general PUT route in backend if you want to rename items.
+      // For now, we will use the restock endpoint logic which acts as an update in many ERPs,
+      // or we can skip full editing if the backend only supports restocking.
+
+      // Let's assume we just want to update quantity for now via the Restock Endpoint
+      // logic we built earlier, OR ideally, we'd add a full PUT /api/inventory/:id route.
+
+      // Since your backend currently only has `restockItem` (PUT /:id/restock),
+      // we will use that for adding stock.
+
       await axios.put(
-        `${API_URL}/${editingProduct._id}`,
-        editingProduct,
-        config
+        `${API_BASE_URL}/api/inventory/${editingItem._id}/restock`,
+        { amount: parseInt(editingItem.addAmount) }, // We add a temporary field for input
+        config,
       );
+
       setIsEditModalOpen(false);
-      fetchProducts();
+      fetchInventory();
+      alert("Stock updated!");
     } catch (err) {
       alert("Update failed.");
     }
   };
 
-  // DELETE PRODUCT
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure?")) {
-      await axios.delete(`${API_URL}/${id}`, config);
-      fetchProducts();
-    }
-  };
-
-  const getStockStatus = (stock) => {
-    if (stock <= 100) return { label: "Critical", class: "status error" };
-    if (stock <= 500) return { label: "Low Stock", class: "status pending" };
-    return { label: "Optimal", class: "status success" };
+  const getStockStatus = (qty) => {
+    if (qty <= 100) return { label: "Critical", class: "status error" };
+    if (qty <= 500) return { label: "Low", class: "status pending" };
+    return { label: "Good", class: "status success" };
   };
 
   return (
@@ -105,58 +106,46 @@ const AdminInventory = () => {
       <AdminSidebar />
       <main className="admin-content">
         <h1 className="page-title">
-          <FaWarehouse /> Inventory Management
+          <FaWarehouse /> Live Inventory
         </h1>
 
-        {/* ADD FORM */}
+        {/* ADD ITEM FORM */}
         <div className="card inventory-form-card">
           <h3>
-            <FaPlus /> Add New Variety
+            <FaPlus /> Add New Stock
           </h3>
-          <form className="inventory-form" onSubmit={handleSubmit}>
+          <form className="inventory-form" onSubmit={handleAdd}>
             <input
-              name="name"
-              placeholder="Name"
+              placeholder="Item Name (e.g. Super Basmati)"
               value={formData.name}
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
               required
             />
-            <input
-              name="sku"
-              placeholder="SKU"
-              value={formData.sku}
-              onChange={(e) =>
-                setFormData({ ...formData, sku: e.target.value })
-              }
-              required
-            />
             <select
-              name="category"
               value={formData.category}
               onChange={(e) =>
                 setFormData({ ...formData, category: e.target.value })
               }
             >
               <option value="Basmati">Basmati</option>
-              <option value="Kainat">Kainat</option>
-              <option value="Irri-6">Irri-6</option>
+              <option value="Non-Basmati">Non-Basmati</option>
+              <option value="Organic">Organic</option>
+              <option value="Feed">Feed/Broken</option>
             </select>
             <input
-              name="currentStock"
               type="number"
-              placeholder="Stock"
-              value={formData.currentStock}
+              placeholder="Quantity (Bags)"
+              value={formData.quantity}
               onChange={(e) =>
-                setFormData({ ...formData, currentStock: e.target.value })
+                setFormData({ ...formData, quantity: e.target.value })
               }
               required
             />
             <input
-              name="pricePerBag"
               type="number"
-              placeholder="Price"
+              placeholder="Price (Rs/Bag)"
               value={formData.pricePerBag}
               onChange={(e) =>
                 setFormData({ ...formData, pricePerBag: e.target.value })
@@ -164,62 +153,65 @@ const AdminInventory = () => {
               required
             />
             <button type="submit" className="add-btn">
-              Add Product
+              Add to Stock
             </button>
           </form>
         </div>
 
-        {/* TABLE */}
+        {/* INVENTORY TABLE */}
         <div className="card">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>SKU</th>
-                <th>Stock</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p._id}>
-                  <td>{p.name}</td>
-                  <td>{p.sku}</td>
-                  <td>{p.currentStock}</td>
-                  <td>Rs. {p.pricePerBag}</td>
-                  <td>
-                    <span className={getStockStatus(p.currentStock).class}>
-                      {getStockStatus(p.currentStock).label}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="action-btn edit"
-                      onClick={() => openEditModal(p)}
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      className="action-btn delete"
-                      onClick={() => handleDelete(p._id)}
-                    >
-                      <FaTrash />
-                    </button>
-                  </td>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Stock Level</th>
+                  <th>Price / Bag</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item._id}>
+                    <td style={{ fontWeight: "bold", color: "#333" }}>
+                      {item.name}
+                    </td>
+                    <td>{item.category}</td>
+                    <td>{item.quantity} Bags</td>
+                    <td>Rs. {item.pricePerBag}</td>
+                    <td>
+                      <span className={getStockStatus(item.quantity).class}>
+                        {getStockStatus(item.quantity).label}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="action-btn edit"
+                        onClick={() => {
+                          setEditingItem({ ...item, addAmount: 0 });
+                          setIsEditModalOpen(true);
+                        }}
+                      >
+                        <FaEdit /> Restock
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        {/* EDIT MODAL */}
+        {/* RESTOCK MODAL */}
         {isEditModalOpen && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
-                <h3>Edit Product</h3>
+                <h3>Restock: {editingItem.name}</h3>
                 <button
                   className="close-modal"
                   onClick={() => setIsEditModalOpen(false)}
@@ -228,41 +220,22 @@ const AdminInventory = () => {
                 </button>
               </div>
               <form onSubmit={handleUpdate} className="modal-form">
-                <label>Product Name</label>
-                <input
-                  type="text"
-                  value={editingProduct.name}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      name: e.target.value,
-                    })
-                  }
-                />
-                <label>Stock (Bags)</label>
+                <p>
+                  Current Stock: <strong>{editingItem.quantity}</strong> bags
+                </p>
+                <label>Add Bags:</label>
                 <input
                   type="number"
-                  value={editingProduct.currentStock}
+                  autoFocus
                   onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      currentStock: e.target.value,
-                    })
-                  }
-                />
-                <label>Price (PKR)</label>
-                <input
-                  type="number"
-                  value={editingProduct.pricePerBag}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      pricePerBag: e.target.value,
+                    setEditingItem({
+                      ...editingItem,
+                      addAmount: e.target.value,
                     })
                   }
                 />
                 <button type="submit" className="update-btn">
-                  Save Changes
+                  Confirm Restock
                 </button>
               </form>
             </div>

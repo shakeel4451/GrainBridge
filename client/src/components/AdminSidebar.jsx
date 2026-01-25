@@ -92,6 +92,11 @@ const AdminSidebar = () => {
               <FaTruck /> Supplier Mgmt
             </Link>
           </li>
+          <li className={isLinkActive("/admin/shipments") ? "active" : ""}>
+            <Link to="/admin/shipments" onClick={handleLinkClick}>
+              <FaTruck /> Incoming Shipments
+            </Link>
+          </li>
 
           <li className={isLinkActive("/admin/reports") ? "active" : ""}>
             <Link to="/admin/reports" onClick={handleLinkClick}>
