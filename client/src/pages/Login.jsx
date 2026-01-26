@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Login.css";
 
-const API_BASE_URL = "http://localhost:5000";
+import { API_BASE_URL } from "../config";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -26,7 +26,7 @@ const Login = () => {
       // Compare the toggle selected in UI (role) with the database result (data.role)
       if (data.role !== role) {
         setError(
-          `Access Denied: You are registered as a ${data.role}, not an ${role}.`
+          `Access Denied: You are registered as a ${data.role}, not an ${role}.`,
         );
         return; // Halt the login process
       }

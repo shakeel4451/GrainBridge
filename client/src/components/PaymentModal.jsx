@@ -8,11 +8,7 @@ import {
 } from "@stripe/react-stripe-js";
 import "./PaymentModal.css"; // We will create this css next
 
-// PASTE YOUR PUBLISHABLE KEY HERE
-const stripePromise = loadStripe(
-  import.meta.env
-    .pk_test_51SttKxRFoOUzByp8mdvE9NWgIc0Rg92dUTXrnD3AKma6M2kOYSOdHGmKay8goC1RV03lPHlp6zQQSzShc2JQZk8u00Kg0DKLQV,
-);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_KEY);
 
 const CheckoutForm = ({ amount, onSuccess, onCancel }) => {
   const stripe = useStripe();

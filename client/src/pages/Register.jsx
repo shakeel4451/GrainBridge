@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Register.css";
 
-const API_BASE_URL = "http://localhost:5000";
+import { API_BASE_URL } from "../config";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -35,15 +35,12 @@ const Register = () => {
     try {
       await axios.post(`${API_BASE_URL}/api/auth/register`, formData);
 
-      // --- PREVENT AUTO-LOGIN ---
-      // We do not store "userInfo" or navigate automatically anymore.
       setIsRegistered(true);
 
-      // Auto-redirect to login after 4 seconds
       setTimeout(() => navigate("/login"), 4000);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Registration failed. Please try again."
+        err.response?.data?.message || "Registration failed. Please try again.",
       );
     } finally {
       setLoading(false);
