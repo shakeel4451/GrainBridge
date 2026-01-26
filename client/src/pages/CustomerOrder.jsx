@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import CustomerSidebar from "../components/CustomerSidebar";
-import "./CustomerDashboard.css"; // We can reuse the existing styles
+import PaymentModal from "../components/PaymentModal"; // Import the Payment Modal
+import "./CustomerDashboard.css";
 import {
   FaShoppingCart,
   FaTimes,
@@ -25,6 +26,10 @@ const CustomerOrder = () => {
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
   const [qtyInputs, setQtyInputs] = useState({});
+
+  // Payment State
+  const [clientSecret, setClientSecret] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Cart State
   const [cart, setCart] = useState(() => {
@@ -112,8 +117,30 @@ const CustomerOrder = () => {
     );
   };
 
-  const handleCheckout = async () => {
+  // --- STRIPE PAYMENT FLOW ---
+  const initiatePayment = async () => {
     if (cart.length === 0) return;
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const total = calculateTotal();
+
+      const { data } = await axios.post(
+        `${API_BASE_URL}/api/payment/create-intent`,
+        { amount: total },
+        config,
+      );
+
+      setClientSecret(data.clientSecret);
+      setShowPaymentModal(true); // Open Modal
+      setIsCartOpen(false); // Close Cart
+    } catch (error) {
+      console.error(error);
+      alert("Could not initiate payment. Check server.");
+    }
+  };
+
+  const handleOrderSuccess = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const orderPayload = {
@@ -124,16 +151,18 @@ const CustomerOrder = () => {
         })),
         totalAmount: calculateTotal(),
         shippingAddress: userInfo.address || "Default Address",
-        status: "Pending",
+        status: "Processing", // Paid -> Processing
       };
+
       await axios.post(`${API_BASE_URL}/api/orders`, orderPayload, config);
-      alert("Order Placed Successfully!");
+
+      alert("✅ Payment Successful! Order Placed.");
       setCart([]);
       localStorage.removeItem("cart");
-      setIsCartOpen(false);
-      navigate("/customer/history"); // Send them to history after buying
+      setShowPaymentModal(false);
+      navigate("/customer/history");
     } catch (error) {
-      alert("Order failed. Please try again.");
+      alert("Payment charged, but order creation failed. Contact support.");
     }
   };
 
@@ -211,6 +240,7 @@ const CustomerOrder = () => {
         )}
       </main>
 
+      {/* Cart Sidebar */}
       <div className={`cart-sidebar ${isCartOpen ? "open" : ""}`}>
         <div className="cart-header">
           <h2>Your Cart</h2>
@@ -247,17 +277,28 @@ const CustomerOrder = () => {
               <span>Total:</span>
               <span>Rs. {calculateTotal().toLocaleString()}</span>
             </div>
-            <button className="checkout-btn" onClick={handleCheckout}>
-              Confirm Order
+            <button className="checkout-btn" onClick={initiatePayment}>
+              Secure Checkout
             </button>
           </div>
         )}
       </div>
+
       {isCartOpen && (
         <div
           className="cart-backdrop"
           onClick={() => setIsCartOpen(false)}
         ></div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && clientSecret && (
+        <PaymentModal
+          clientSecret={clientSecret}
+          amount={calculateTotal()}
+          onSuccess={handleOrderSuccess}
+          onCancel={() => setShowPaymentModal(false)}
+        />
       )}
     </div>
   );

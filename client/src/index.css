@@ -1,0 +1,58 @@
+:root {
+  /* Brand Colors - Change here to update everywhere */
+  --primary-green: #3e5235;
+  --primary-hover: #2c3e26;
+  --accent-gold: #8c734b;
+  --light-bg: #f8f9fa;
+  --text-dark: #2c3e50;
+  --text-light: #ffffff;
+  --danger: #d32f2f;
+  --success: #2e7d32;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Roboto", "Oxygen", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--light-bg);
+  color: var(--text-dark);
+}
+
+/* Global Card Class (Fixes the collision issue) */
+.card,
+.admin-card,
+.supplier-card,
+.product-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  border: 1px solid #eee;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+/* Global Button Styles */
+button {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Scrollbar Polish */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-gold);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-green);
+}
