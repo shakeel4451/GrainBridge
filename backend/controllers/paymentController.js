@@ -1,7 +1,8 @@
 // backend/controllers/paymentController.js
 // PASTE YOUR SECRET KEY INSIDE THE QUOTES BELOW (e.g., "sk_test_51Mz...")
 const stripe = require("stripe")(
-  "sk_test_51SttKxRFoOUzByp8RjSpJ62vUgUACYxXf0JVDrr5L33atm4AdKIhLQiu3MZKlj7Nras8AKMuyaukGGkt0zRE09W200BwNOAL7p",
+  process.env
+    .sk_test_51SttKxRFoOUzByp8RjSpJ62vUgUACYxXf0JVDrr5L33atm4AdKIhLQiu3MZKlj7Nras8AKMuyaukGGkt0zRE09W200BwNOAL7p,
 );
 
 const createPaymentIntent = async (req, res) => {

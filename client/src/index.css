@@ -1,5 +1,5 @@
 :root {
-  /* Brand Colors - Change here to update everywhere */
+  /* Brand Colors */
   --primary-green: #3e5235;
   --primary-hover: #2c3e26;
   --accent-gold: #8c734b;
@@ -19,7 +19,7 @@ body {
   color: var(--text-dark);
 }
 
-/* Global Card Class (Fixes the collision issue) */
+/* Global Card Class */
 .card,
 .admin-card,
 .supplier-card,
@@ -42,7 +42,6 @@ button {
   transition: all 0.3s ease;
 }
 
-/* Scrollbar Polish */
 ::-webkit-scrollbar {
   width: 8px;
 }

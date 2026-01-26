@@ -70,7 +70,10 @@ export default defineConfig([
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.6.4",
     "axios": "^1.13.2",
+    "jwt-decode": "^4.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
@@ -218,51 +221,51 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+
+// Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AiChatbot from "./components/AiChatbot";
+
+// Public Pages
 import Home from "./pages/Home";
-import OurProcess from "./pages/OurProcess";
-import Contact from "./pages/Contact";
 import About from "./pages/About";
 import Products from "./pages/Products";
+import OurProcess from "./pages/OurProcess";
+import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-// Protection Component
-import ProtectedRoute from "./components/ProtectedRoute";
-
-// Portals (Dashboards)
+// Admin Pages
 import AdminDashboard from "./pages/AdminDashboard";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import SupplierDashboard from "./pages/SupplierDashboard";
-
-// Supplier Subpages
-import SupplierPayments from "./pages/SupplierPayments";
-import SupplierMarketRates from "./pages/SupplierMarketRates";
-import SupplierDemand from "./pages/SupplierDemand";
-import SupplierAIQuality from "./pages/SupplierAIQuality";
-import SupplierProfile from "./pages/SupplierProfile";
-import { SupplierSettings } from "./pages/PortalSettings";
-
-// Customer Subpages
-import CustomerHistory from "./pages/CustomerHistory";
-import CustomerTracking from "./pages/CustomerTracking";
-import Traceability from "./pages/Traceability";
-import CustomerProfile from "./pages/CustomerProfile";
-import { CustomerSettings } from "./pages/PortalSettings";
-
-// Admin Subpages
-import AdminInventory from "./pages/AdminInventory";
-import AdminSales from "./pages/AdminSales";
 import AdminOrders from "./pages/AdminOrders";
+import AdminSales from "./pages/AdminSales";
+import AdminInventory from "./pages/AdminInventory";
 import AdminMilling from "./pages/AdminMilling";
 import AdminCustomers from "./pages/AdminCustomers";
 import AdminSuppliers from "./pages/AdminSuppliers";
 import AdminReports from "./pages/AdminReports";
+import AdminShipments from "./pages/AdminShipments"; // ✅ Verified Import
 import { AdminSettings } from "./pages/PortalSettings";
 
-// AI Component
-import AiChatbot from "./components/AiChatbot";
+// Supplier Pages
+import SupplierDashboard from "./pages/SupplierDashboard";
+import SupplierDemand from "./pages/SupplierDemand";
+import SupplierPayments from "./pages/SupplierPayments";
+import SupplierMarketRates from "./pages/SupplierMarketRates";
+import SupplierAIQuality from "./pages/SupplierAIQuality";
+import SupplierProfile from "./pages/SupplierProfile";
+import { SupplierSettings } from "./pages/PortalSettings";
+
+// Customer Pages
+import CustomerOrder from "./pages/CustomerOrder";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import CustomerHistory from "./pages/CustomerHistory";
+import CustomerTracking from "./pages/CustomerTracking";
+import CustomerProfile from "./pages/CustomerProfile";
+import Traceability from "./pages/Traceability";
+import { CustomerSettings } from "./pages/PortalSettings";
 
 import "./App.css";
 
@@ -291,6 +294,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/shipments"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminShipments />
               </ProtectedRoute>
             }
           />
@@ -431,6 +442,14 @@ function App() {
             }
           />
           <Route
+            path="/customer/order"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <CustomerOrder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/customer/history"
             element={
               <ProtectedRoute allowedRoles={["Customer"]}>
@@ -471,7 +490,7 @@ function App() {
             }
           />
 
-          {/* Fallback */}
+          {/* Fallback Route */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <Footer />
@@ -736,6 +755,11 @@ const AdminSidebar = () => {
               <FaTruck /> Supplier Mgmt
             </Link>
           </li>
+          <li className={isLinkActive("/admin/shipments") ? "active" : ""}>
+            <Link to="/admin/shipments" onClick={handleLinkClick}>
+              <FaTruck /> Incoming Shipments
+            </Link>
+          </li>
 
           <li className={isLinkActive("/admin/reports") ? "active" : ""}>
             <Link to="/admin/reports" onClick={handleLinkClick}>
@@ -800,7 +824,9 @@ export default AdminSidebar;
   gap: 10px;
   font-size: 16px;
   font-weight: bold;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
   pointer-events: auto;
 }
 
@@ -893,6 +919,7 @@ export default AdminSidebar;
   border-radius: 15px;
   font-size: 14px;
   line-height: 1.4;
+  white-space: pre-line;
 }
 .message.user .message-bubble {
   background: #3e5235;
@@ -974,60 +1001,133 @@ export default AdminSidebar;
 // ==========================================
 
 import React, { useState, useRef, useEffect } from "react";
+import axios from "axios"; // Import Axios
+import { API_BASE_URL } from "../config"; // Import Config
 import "./AiChatbot.css";
 import { FaRobot, FaPaperPlane, FaTimes, FaMicrophone } from "react-icons/fa";
 
 const AiChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
-
-  // Chat Data
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I am GrainBot. How can I help you today? Ask about prices or tracking.",
+      text: "Salam! I am GrainBot 🤖. Ask me about rice prices, stock availability, or tracking.",
       sender: "bot",
     },
   ]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+
+  // Cache inventory for quick answers
+  const [inventory, setInventory] = useState([]);
+
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Toggle Chat function
+  // Fetch Inventory on Load (So the bot knows prices)
+  useEffect(() => {
+    const fetchContext = async () => {
+      try {
+        const { data } = await axios.get(`${API_BASE_URL}/api/inventory`);
+        setInventory(data);
+      } catch (err) {
+        console.error("Bot failed to learn inventory");
+      }
+    };
+    fetchContext();
+  }, []);
+
   const toggleChat = () => setIsOpen(!isOpen);
 
-  // ================= SEND LOGIC =================
+  // --- THE BRAIN OF THE BOT ---
+  const generateResponse = (input) => {
+    const lowerInput = input.toLowerCase();
+
+    // 1. GREETINGS
+    if (
+      lowerInput.includes("hello") ||
+      lowerInput.includes("hi") ||
+      lowerInput.includes("salam")
+    ) {
+      return "Walaikum Assalam! How can I help you with your rice business today?";
+    }
+
+    // 2. PRICE QUERIES (Dynamic from DB)
+    if (
+      lowerInput.includes("price") ||
+      lowerInput.includes("rate") ||
+      lowerInput.includes("cost")
+    ) {
+      // Check if they mentioned a specific rice
+      const foundItem = inventory.find((item) =>
+        lowerInput.includes(item.name.toLowerCase()),
+      );
+
+      if (foundItem) {
+        return `The current rate for ${foundItem.name} is Rs. ${foundItem.pricePerBag} per bag.`;
+      } else {
+        // List all prices
+        return (
+          "Here are our latest market rates:\n" +
+          inventory.map((i) => `• ${i.name}: Rs. ${i.pricePerBag}`).join("\n")
+        );
+      }
+    }
+
+    // 3. STOCK QUERIES
+    if (lowerInput.includes("stock") || lowerInput.includes("available")) {
+      const foundItem = inventory.find((item) =>
+        lowerInput.includes(item.name.toLowerCase()),
+      );
+      if (foundItem) {
+        return foundItem.quantity > 0
+          ? `Yes, we have ${foundItem.quantity} bags of ${foundItem.name} available.`
+          : `Sorry, ${foundItem.name} is currently out of stock.`;
+      }
+      return (
+        "We have stock available for: " +
+        inventory.map((i) => i.name).join(", ")
+      );
+    }
+
+    // 4. TRACKING
+    if (lowerInput.includes("track") || lowerInput.includes("order")) {
+      return "To track an order, please visit the 'Track Shipment' page in your Customer Dashboard and enter your Order ID.";
+    }
+
+    // 5. CONTACT
+    if (
+      lowerInput.includes("contact") ||
+      lowerInput.includes("location") ||
+      lowerInput.includes("phone")
+    ) {
+      return "You can reach us at +92 300 1234567 or visit our mill in Gujranwala Industrial Zone.";
+    }
+
+    // FALLBACK
+    return "I am trained to answer questions about Rice Prices and Inventory. Please ask me about 'Basmati Price' or 'Stock Levels'.";
+  };
+
   const handleSend = () => {
     if (!inputText.trim()) return;
 
+    // Add User Message
     const userMsg = { id: Date.now(), text: inputText, sender: "user" };
     setMessages((prev) => [...prev, userMsg]);
     setInputText("");
     setIsTyping(true);
 
+    // Simulate AI Thinking Delay
     setTimeout(() => {
-      let botResponse =
-        "I am currently in simulation mode. Connect me to OpenAI to make me smart!";
-      const lowerInput = userMsg.text.toLowerCase();
-
-      if (lowerInput.includes("price") || lowerInput.includes("rate")) {
-        botResponse =
-          "Today's rate for Super Kernel Basmati is Rs. 11,800/40kg.";
-      } else if (lowerInput.includes("track") || lowerInput.includes("order")) {
-        botResponse = "Please provide your Order ID to track your shipment.";
-      } else if (lowerInput.includes("hello") || lowerInput.includes("hi")) {
-        botResponse =
-          "Salam! Welcome to GrainBridge. Are you a Farmer or a Customer?";
-      }
-
-      const botMsg = { id: Date.now() + 1, text: botResponse, sender: "bot" };
+      const responseText = generateResponse(userMsg.text);
+      const botMsg = { id: Date.now() + 1, text: responseText, sender: "bot" };
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
-    }, 1500);
+    }, 1000);
   };
 
   const handleKeyPress = (e) => {
@@ -1036,7 +1136,6 @@ const AiChatbot = () => {
 
   return (
     <div className="chatbot-wrapper">
-      {/* Chat Window */}
       <div className={`chatbot-window ${isOpen ? "open" : ""}`}>
         <div className="chatbot-header">
           <div className="header-info">
@@ -1051,7 +1150,12 @@ const AiChatbot = () => {
         <div className="chatbot-messages">
           {messages.map((msg) => (
             <div key={msg.id} className={`message ${msg.sender}`}>
-              <div className="message-bubble">{msg.text}</div>
+              <div
+                className="message-bubble"
+                style={{ whiteSpace: "pre-line" }}
+              >
+                {msg.text}
+              </div>
             </div>
           ))}
           {isTyping && (
@@ -1069,7 +1173,7 @@ const AiChatbot = () => {
         <div className="chatbot-input">
           <input
             type="text"
-            placeholder="Type a message..."
+            placeholder="Ask about prices..."
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -1083,7 +1187,6 @@ const AiChatbot = () => {
         </div>
       </div>
 
-      {/* Floating Toggle Button */}
       <button
         className={`chatbot-toggle ${isOpen ? "hide" : ""}`}
         onClick={toggleChat}
@@ -1281,7 +1384,6 @@ const CustomerSidebar = () => {
 
   const isLinkActive = (path) => location.pathname === path;
 
-  // Automatically close sidebar on route change (for mobile)
   useEffect(() => {
     setIsOpen(false);
   }, [location]);
@@ -1294,12 +1396,10 @@ const CustomerSidebar = () => {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
       <button className="mobile-menu-toggle" onClick={() => setIsOpen(true)}>
         <FaBars /> Menu
       </button>
 
-      {/* Sidebar Container */}
       <div className={`customer-sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
@@ -1320,8 +1420,9 @@ const CustomerSidebar = () => {
             </Link>
           </li>
 
-          <li className={isLinkActive("/products") ? "active" : ""}>
-            <Link to="/products">
+          {/* ✅ FIXED LINK: Points to Internal Order Page */}
+          <li className={isLinkActive("/customer/order") ? "active" : ""}>
+            <Link to="/customer/order">
               <FaShoppingCart /> Place New Order
             </Link>
           </li>
@@ -1359,15 +1460,12 @@ const CustomerSidebar = () => {
           </li>
         </ul>
 
-        {/* LOGOUT BUTTON */}
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
             <FaSignOutAlt /> Logout
           </button>
         </div>
       </div>
-
-      {/* Overlay for mobile */}
       {isOpen && (
         <div className="sidebar-overlay" onClick={() => setIsOpen(false)}></div>
       )}
@@ -1784,36 +1882,237 @@ export default Navbar;
 
 
 // ==========================================
+// FILE: src\components\PaymentModal.css
+// ==========================================
+
+.payment-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+}
+
+.payment-modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.stripe-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25px;
+  gap: 15px;
+}
+
+.pay-now-btn {
+  background: #3e5235;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  flex: 1;
+  cursor: pointer;
+}
+
+.pay-now-btn:disabled {
+  background: #ccc;
+}
+
+.cancel-pay-btn {
+  background: transparent;
+  color: #d32f2f;
+  padding: 12px;
+  border: 1px solid #d32f2f;
+  border-radius: 6px;
+  font-weight: bold;
+  flex: 1;
+  cursor: pointer;
+}
+
+.stripe-error {
+  color: #d32f2f;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+
+// ==========================================
+// FILE: src\components\PaymentModal.jsx
+// ==========================================
+
+import React, { useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+import "./PaymentModal.css"; // We will create this css next
+
+// PASTE YOUR PUBLISHABLE KEY HERE
+const stripePromise = loadStripe(
+  "pk_test_51SttKxRFoOUzByp8mdvE9NWgIc0Rg92dUTXrnD3AKma6M2kOYSOdHGmKay8goC1RV03lPHlp6zQQSzShc2JQZk8u00Kg0DKLQV",
+);
+
+const CheckoutForm = ({ amount, onSuccess, onCancel }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) return;
+
+    setIsProcessing(true);
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required", // Prevents redirecting away from your site
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setIsProcessing(false);
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      onSuccess(); // Payment verified! Trigger the order creation
+    } else {
+      setIsProcessing(false);
+      setErrorMsg("Payment failed. Please try again.");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="stripe-form">
+      <h3 style={{ color: "#3e5235", marginBottom: "20px" }}>
+        Secure Checkout (Rs. {amount.toLocaleString()})
+      </h3>
+      <PaymentElement />
+      {errorMsg && <div className="stripe-error">{errorMsg}</div>}
+      <div className="stripe-actions">
+        <button type="button" className="cancel-pay-btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="pay-now-btn"
+          disabled={!stripe || isProcessing}
+        >
+          {isProcessing
+            ? "Processing..."
+            : `Pay Rs. ${amount.toLocaleString()}`}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+const PaymentModal = ({ clientSecret, amount, onSuccess, onCancel }) => {
+  const options = { clientSecret };
+
+  return (
+    <div className="payment-modal-overlay">
+      <div className="payment-modal-content">
+        <Elements stripe={stripePromise} options={options}>
+          <CheckoutForm
+            amount={amount}
+            onSuccess={onSuccess}
+            onCancel={onCancel}
+          />
+        </Elements>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentModal;
+
+
+// ==========================================
 // FILE: src\components\ProtectedRoute.jsx
 // ==========================================
 
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  // Retrieve user info from localStorage
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  const location = useLocation();
 
-  // 1. Check if user is logged in
-  if (!userInfo) {
-    // Redirect to login if no user info exists
+  // 1. Retrieve and Parse User Info safely
+  let userInfo = null;
+  try {
+    const storedData = localStorage.getItem("userInfo");
+    if (storedData) {
+      userInfo = JSON.parse(storedData);
+    }
+  } catch (error) {
+    // If JSON is corrupted, force logout
+    localStorage.removeItem("userInfo");
     return <Navigate to="/login" replace />;
   }
 
-  // 2. Check if the user's role is allowed for this specific route
+  // 2. Check if User or Token exists
+  if (!userInfo || !userInfo.token) {
+    // Redirect to login, but remember where they were trying to go (state)
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  // 3. Check if Token is Expired
+  try {
+    const decoded = jwtDecode(userInfo.token);
+    const currentTime = Date.now() / 1000; // Convert milliseconds to seconds
+
+    if (decoded.exp < currentTime) {
+      // Token has expired
+      console.warn("Session expired. Logging out...");
+      localStorage.removeItem("userInfo");
+      return <Navigate to="/login" replace />;
+    }
+  } catch (error) {
+    // If token is invalid/malformed
+    localStorage.removeItem("userInfo");
+    return <Navigate to="/login" replace />;
+  }
+
+  // 4. Role-Based Access Control (RBAC)
   if (allowedRoles && !allowedRoles.includes(userInfo.role)) {
-    // If unauthorized, redirect to their own dashboard or home
-    const redirectPath =
-      userInfo.role === "Admin"
-        ? "/admin/dashboard"
-        : userInfo.role === "Customer"
-        ? "/customer/dashboard"
-        : "/supplier/dashboard";
+    // If unauthorized, redirect to their specific dashboard
+    let redirectPath = "/login";
+
+    switch (userInfo.role) {
+      case "Admin":
+        redirectPath = "/admin/dashboard";
+        break;
+      case "Customer":
+        redirectPath = "/customer/dashboard";
+        break;
+      case "Supplier":
+        redirectPath = "/supplier/dashboard";
+        break;
+      default:
+        redirectPath = "/login";
+    }
 
     return <Navigate to={redirectPath} replace />;
   }
 
-  // 3. If authenticated and authorized, render the component (children)
+  // 5. Authenticated & Authorized -> Render Page
   return children;
 };
 
@@ -2103,6 +2402,79 @@ const SupplierSidebar = () => {
 };
 
 export default SupplierSidebar;
+
+
+// ==========================================
+// FILE: src\config.js
+// ==========================================
+
+// src/config.js
+// Change this ONE line when you deploy to the internet
+export const API_BASE_URL = "http://localhost:5000";
+
+
+// ==========================================
+// FILE: src\index.css
+// ==========================================
+
+:root {
+  /* Brand Colors - Change here to update everywhere */
+  --primary-green: #3e5235;
+  --primary-hover: #2c3e26;
+  --accent-gold: #8c734b;
+  --light-bg: #f8f9fa;
+  --text-dark: #2c3e50;
+  --text-light: #ffffff;
+  --danger: #d32f2f;
+  --success: #2e7d32;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Roboto", "Oxygen", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--light-bg);
+  color: var(--text-dark);
+}
+
+/* Global Card Class (Fixes the collision issue) */
+.card,
+.admin-card,
+.supplier-card,
+.product-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  border: 1px solid #eee;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+/* Global Button Styles */
+button {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Scrollbar Polish */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-gold);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-green);
+}
 
 
 // ==========================================
@@ -2477,155 +2849,418 @@ export default About;
 // FILE: src\pages\AdminCustomers.jsx
 // ==========================================
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
-import "./AdminCustomers.css";
+import "./AdminDashboard.css";
+// 1. IMPORT THE CONFIG
+import { API_BASE_URL } from "../config";
 import {
-  FaUsers,
-  FaSearch,
-  FaEnvelope,
-  FaUserEdit,
-  FaSyncAlt,
-  FaUserTag,
+  FaMapMarkerAlt,
+  FaChartLine,
+  FaTruck,
+  FaShoppingCart,
+  FaWarehouse,
+  FaExclamationTriangle,
+  FaBoxOpen,
+  FaArrowRight,
+  FaTimes,
+  FaPlusCircle,
 } from "react-icons/fa";
 
-const AdminCustomers = () => {
-  const [customers, setCustomers] = useState([]);
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
+
+const AdminDashboard = () => {
+  // --- STATE MANAGEMENT ---
+  const [stockAlerts, setStockAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
 
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-  const config = {
-    headers: { Authorization: `Bearer ${userInfo?.token}` },
-  };
+  // Initialize metrics
+  const [metrics, setMetrics] = useState({
+    totalSales: 0,
+    activeOrders: 0,
+    millingEfficiency: 0,
+    totalInventory: 0,
+    inventoryDistribution: [],
+    salesTrend: [],
+  });
 
-  // 1. Fetch real customers from the database
-  const fetchCustomers = async () => {
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [restockAmount, setRestockAmount] = useState(500);
+
+  // --- DATA FETCHING ---
+  const fetchDashboardData = useCallback(async () => {
     try {
-      setLoading(true);
-      const { data } = await axios.get(
-        "http://localhost:5000/api/auth/users",
-        config
-      );
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!userInfo) return;
 
-      // Filter for only Customers
-      const onlyCustomers = data.filter((user) => user.role === "Customer");
-      setCustomers(onlyCustomers);
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo?.token}` },
+      };
+
+      // 2. USE THE CONFIG URL HERE
+      const [alertsRes, metricsRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/inventory/alerts`, config),
+        axios.get(`${API_BASE_URL}/api/analytics/metrics`, config),
+      ]);
+
+      setStockAlerts(alertsRes.data.alerts || []);
+      setMetrics(metricsRes.data);
       setLoading(false);
     } catch (err) {
-      console.error("Error fetching customers", err);
+      console.error("Dashboard Sync Failed:", err);
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // --- HANDLERS ---
+  const openRestockModal = (item) => {
+    setSelectedItem(item);
+    setRestockAmount(500);
+    setIsModalOpen(true);
+  };
+
+  const closeRestockModal = () => {
+    setIsModalOpen(false);
+    setSelectedItem(null);
+  };
+
+  const handleRestockSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedItem) return;
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo?.token}` },
+      };
+
+      await axios.put(
+        `${API_BASE_URL}/api/inventory/${selectedItem._id}/restock`,
+        { amount: parseInt(restockAmount) },
+        config,
+      );
+
+      alert(`${selectedItem.name} restocked successfully!`);
+      closeRestockModal();
+      fetchDashboardData(); // Live refresh
+    } catch (err) {
+      console.error(err);
+      alert("Failed to restock item.");
     }
   };
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  // Fallback data for Bar Chart if DB is empty
+  const inventoryFallback = [{ name: "No Data", quantity: 0 }];
 
-  // 2. Search Logic
-  const filteredCustomers = customers.filter(
-    (cust) =>
-      cust.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cust.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const recentOrders = [
+    {
+      id: "#1001",
+      customer: "Global Foods Inc.",
+      status: "success",
+      date: "2025-12-15",
+    },
+    {
+      id: "#1002",
+      customer: "Asian Grocers",
+      status: "pending",
+      date: "2025-12-14",
+    },
+    {
+      id: "#1003",
+      customer: "Rice Depot Ltd.",
+      status: "success",
+      date: "2025-12-13",
+    },
+    {
+      id: "#1004",
+      customer: "Local Market Co.",
+      status: "error",
+      date: "2025-12-12",
+    },
+  ];
 
   return (
     <div className="admin-layout">
       <AdminSidebar />
       <main className="admin-content">
-        <div className="admin-header-flex">
-          <h1 className="page-title">
-            <FaUsers /> Customer Accounts
-          </h1>
-          <button className="refresh-btn" onClick={fetchCustomers}>
-            <FaSyncAlt /> Sync Database
-          </button>
+        <h1 className="page-title">Admin Dashboard</h1>
+
+        {/* 1. ALERTS SECTION */}
+        {!loading && stockAlerts.length > 0 && (
+          <div className="card alert-card-container">
+            <div className="alert-header">
+              <FaExclamationTriangle className="warning-icon" />
+              <h3>Critical Stock Alerts ({stockAlerts.length})</h3>
+            </div>
+            <div className="alert-list">
+              {stockAlerts.map((item) => (
+                <div key={item._id} className="alert-item">
+                  <div className="alert-info">
+                    <FaBoxOpen />
+                    <span>
+                      <strong>{item.name}</strong> is critically low (
+                      {item.category})
+                    </span>
+                  </div>
+                  <div className="alert-count">
+                    <span className="count-red">{item.quantity} Bags</span>
+                    <button
+                      className="procure-btn"
+                      onClick={() => openRestockModal(item)}
+                    >
+                      Procure <FaArrowRight />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 2. MODAL SECTION */}
+        {isModalOpen && selectedItem && (
+          <div className="modal-overlay">
+            <div className="modal-content card">
+              <div className="modal-header">
+                <h3>
+                  <FaPlusCircle /> Restock Inventory
+                </h3>
+                <button className="close-btn" onClick={closeRestockModal}>
+                  <FaTimes />
+                </button>
+              </div>
+              <form onSubmit={handleRestockSubmit}>
+                <p>
+                  You are restocking: <strong>{selectedItem.name}</strong>
+                </p>
+                <div className="form-group">
+                  <label>Quantity to add (Bags):</label>
+                  <input
+                    type="number"
+                    value={restockAmount}
+                    onChange={(e) => setRestockAmount(e.target.value)}
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={closeRestockModal}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="confirm-btn">
+                    Confirm Restock
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 3. METRICS CARDS */}
+        <div className="dashboard-grid inventory-stats">
+          <div className="stat-card">
+            <p>Total Sales</p>
+            <h2>PKR {((metrics.totalSales || 0) / 1000000).toFixed(1)}M</h2>
+          </div>
+          <div className="stat-card">
+            <p>Active Orders</p>
+            <h2>{metrics.activeOrders || 0}</h2>
+          </div>
+          <div className="stat-card">
+            <p>Milling Efficiency</p>
+            <h2 className="success">{metrics.millingEfficiency || 0}%</h2>
+          </div>
+          <div className="stat-card">
+            <p>Total Inventory</p>
+            <h2>{((metrics.totalInventory || 0) / 1000).toFixed(1)}K Bags</h2>
+          </div>
         </div>
 
-        {/* 3. FUNCTIONAL SEARCH BAR */}
-        <div className="card search-card">
-          <div className="search-wrapper">
-            <FaSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search by name, email, or business name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {/* 4. CHARTS SECTION */}
+        <div className="dashboard-grid">
+          {/* SALES LINE CHART */}
+          <div className="card chart-box" style={{ flex: 2 }}>
+            <h3>
+              <FaChartLine /> Sales & Profit Trend
+            </h3>
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={
+                    metrics.salesTrend?.length > 0 ? metrics.salesTrend : []
+                  }
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" stroke="#555" />
+                  <YAxis
+                    yAxisId="left"
+                    stroke="#3e5235"
+                    tickFormatter={(v) => `${v / 1000}K`}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#8c734b"
+                    tickFormatter={(v) => `${v / 1000}K`}
+                  />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="sales"
+                    name="Sales"
+                    stroke="#3e5235"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="profit"
+                    name="Profit (Est)"
+                    stroke="#8c734b"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+
+              {metrics.salesTrend?.length === 0 && (
+                <p
+                  style={{
+                    textAlign: "center",
+                    color: "#999",
+                    marginTop: "-150px",
+                  }}
+                >
+                  No sales data recorded yet.
+                </p>
+              )}
+            </div>
           </div>
-          <div className="customer-count">
-            Total Customers: <strong>{customers.length}</strong>
+
+          {/* MAP PLACEHOLDER */}
+          <div className="card chart-box" style={{ flex: 1 }}>
+            <h3>
+              <FaTruck /> Live Operations Map
+            </h3>
+            <div className="map-placeholder">
+              <FaMapMarkerAlt className="map-icon" />
+              <p>GPS Integration Active</p>
+            </div>
           </div>
         </div>
 
-        <div className="card table-card">
-          {loading ? (
-            <div className="loading-state">Fetching customer records...</div>
-          ) : (
+        {/* 5. LIVE INVENTORY BAR CHART */}
+        <div className="dashboard-grid">
+          <div className="card chart-box" style={{ flex: 1 }}>
+            <h3>
+              <FaWarehouse /> Current Inventory Stock
+            </h3>
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={
+                    metrics.inventoryDistribution?.length > 0
+                      ? metrics.inventoryDistribution
+                      : inventoryFallback
+                  }
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" stroke="#555" />
+                  <YAxis stroke="#555" tickFormatter={(v) => `${v / 1000}K`} />
+                  <Tooltip />
+                  <Bar
+                    dataKey="quantity"
+                    fill="#3e5235"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="card chart-box" style={{ flex: 1 }}>
+            <h3>AI Market Insight</h3>
+            <div className="ai-content">
+              <h4>Prediction Engine</h4>
+              <p>
+                <strong>Trend:</strong> Basmati prices expected to rise 10% in
+                Q2.
+              </p>
+              <p>
+                <strong>Action:</strong> Recommended to secure 5,000 tons from
+                Supplier Alpha immediately.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 6. ORDERS TABLE */}
+        <div className="card full-width">
+          <h3>
+            <FaShoppingCart /> Recent Orders
+          </h3>
+          <div className="table-responsive">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Customer / Company</th>
-                  <th>Contact Details</th>
-                  <th>Primary Address</th>
+                  <th>Order ID</th>
+                  <th>Customer</th>
                   <th>Status</th>
+                  <th>Date</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((cust) => (
-                    <tr key={cust._id}>
-                      <td>
-                        <div className="cust-identity">
-                          <strong>{cust.name}</strong>
-                          <span>{cust.companyName || "Retail Buyer"}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="contact-info">
-                          <p>
-                            <FaEnvelope /> {cust.email}
-                          </p>
-                          <p># {cust.phone || "No phone listed"}</p>
-                        </div>
-                      </td>
-                      <td className="address-cell">
-                        {cust.address || "No address provided"}
-                      </td>
-                      <td>
-                        <span className="status-badge active">
-                          <FaUserTag /> Active
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="edit-profile-btn"
-                          onClick={() => alert(`Editing: ${cust.name}`)}
-                        >
-                          <FaUserEdit /> Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="empty-table">
-                      No customers found matching your search.
+                {recentOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td>{order.id}</td>
+                    <td>{order.customer}</td>
+                    <td>
+                      <span className={`status ${order.status}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td>{order.date}</td>
+                    <td>
+                      <button className="action-btn">View</button>
                     </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
-          )}
+          </div>
         </div>
       </main>
     </div>
   );
 };
 
-export default AdminCustomers;
+export default AdminDashboard;
 
 
 // ==========================================
@@ -3619,102 +4254,103 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
 import "./AdminInventory.css";
+import { API_BASE_URL } from "../config"; // Use the central config
 import {
   FaWarehouse,
   FaPlus,
   FaTrash,
   FaEdit,
-  FaBox,
   FaTimes,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 const AdminInventory = () => {
-  const [products, setProducts] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  // States for Add & Edit
+  // Modal & Form State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
-    sku: "",
     category: "Basmati",
-    currentStock: "",
+    quantity: "",
     pricePerBag: "",
+    supplier: "",
   });
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
 
-  const API_URL = "http://localhost:5000/api/products";
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
   const config = { headers: { Authorization: `Bearer ${userInfo?.token}` } };
 
-  const fetchProducts = async () => {
+  // 1. Fetch Inventory (The REAL Data)
+  const fetchInventory = async () => {
     try {
-      const { data } = await axios.get(API_URL, config);
-      setProducts(data);
+      const { data } = await axios.get(`${API_BASE_URL}/api/inventory`, config);
+      setItems(data);
       setLoading(false);
     } catch (err) {
-      setError("Failed to fetch inventory.");
+      console.error("Failed to fetch inventory", err);
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchInventory();
   }, []);
 
-  // ADD PRODUCT
-  const handleSubmit = async (e) => {
+  // 2. Add New Item
+  const handleAdd = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(API_URL, formData, config);
+      await axios.post(`${API_BASE_URL}/api/inventory`, formData, config);
+      alert("Item added successfully!");
       setFormData({
         name: "",
-        sku: "",
         category: "Basmati",
-        currentStock: "",
+        quantity: "",
         pricePerBag: "",
+        supplier: "",
       });
-      fetchProducts();
+      fetchInventory(); // Refresh list
     } catch (err) {
-      alert("Error adding product.");
+      alert("Failed to add item.");
     }
   };
 
-  // OPEN EDIT MODAL
-  const openEditModal = (product) => {
-    setEditingProduct(product);
-    setIsEditModalOpen(true);
-  };
-
-  // UPDATE PRODUCT
+  // 3. Update Item (Restock or Price Change)
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
+      // We use the "restock" route or build a general update route.
+      // For simplicity, let's assume we are updating stock/price.
+      // Note: You might need to add a general PUT route in backend if you want to rename items.
+      // For now, we will use the restock endpoint logic which acts as an update in many ERPs,
+      // or we can skip full editing if the backend only supports restocking.
+
+      // Let's assume we just want to update quantity for now via the Restock Endpoint
+      // logic we built earlier, OR ideally, we'd add a full PUT /api/inventory/:id route.
+
+      // Since your backend currently only has `restockItem` (PUT /:id/restock),
+      // we will use that for adding stock.
+
       await axios.put(
-        `${API_URL}/${editingProduct._id}`,
-        editingProduct,
-        config
+        `${API_BASE_URL}/api/inventory/${editingItem._id}/restock`,
+        { amount: parseInt(editingItem.addAmount) }, // We add a temporary field for input
+        config,
       );
+
       setIsEditModalOpen(false);
-      fetchProducts();
+      fetchInventory();
+      alert("Stock updated!");
     } catch (err) {
       alert("Update failed.");
     }
   };
 
-  // DELETE PRODUCT
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure?")) {
-      await axios.delete(`${API_URL}/${id}`, config);
-      fetchProducts();
-    }
-  };
-
-  const getStockStatus = (stock) => {
-    if (stock <= 100) return { label: "Critical", class: "status error" };
-    if (stock <= 500) return { label: "Low Stock", class: "status pending" };
-    return { label: "Optimal", class: "status success" };
+  const getStockStatus = (qty) => {
+    if (qty <= 100) return { label: "Critical", class: "status error" };
+    if (qty <= 500) return { label: "Low", class: "status pending" };
+    return { label: "Good", class: "status success" };
   };
 
   return (
@@ -3722,58 +4358,46 @@ const AdminInventory = () => {
       <AdminSidebar />
       <main className="admin-content">
         <h1 className="page-title">
-          <FaWarehouse /> Inventory Management
+          <FaWarehouse /> Live Inventory
         </h1>
 
-        {/* ADD FORM */}
+        {/* ADD ITEM FORM */}
         <div className="card inventory-form-card">
           <h3>
-            <FaPlus /> Add New Variety
+            <FaPlus /> Add New Stock
           </h3>
-          <form className="inventory-form" onSubmit={handleSubmit}>
+          <form className="inventory-form" onSubmit={handleAdd}>
             <input
-              name="name"
-              placeholder="Name"
+              placeholder="Item Name (e.g. Super Basmati)"
               value={formData.name}
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
               required
             />
-            <input
-              name="sku"
-              placeholder="SKU"
-              value={formData.sku}
-              onChange={(e) =>
-                setFormData({ ...formData, sku: e.target.value })
-              }
-              required
-            />
             <select
-              name="category"
               value={formData.category}
               onChange={(e) =>
                 setFormData({ ...formData, category: e.target.value })
               }
             >
               <option value="Basmati">Basmati</option>
-              <option value="Kainat">Kainat</option>
-              <option value="Irri-6">Irri-6</option>
+              <option value="Non-Basmati">Non-Basmati</option>
+              <option value="Organic">Organic</option>
+              <option value="Feed">Feed/Broken</option>
             </select>
             <input
-              name="currentStock"
               type="number"
-              placeholder="Stock"
-              value={formData.currentStock}
+              placeholder="Quantity (Bags)"
+              value={formData.quantity}
               onChange={(e) =>
-                setFormData({ ...formData, currentStock: e.target.value })
+                setFormData({ ...formData, quantity: e.target.value })
               }
               required
             />
             <input
-              name="pricePerBag"
               type="number"
-              placeholder="Price"
+              placeholder="Price (Rs/Bag)"
               value={formData.pricePerBag}
               onChange={(e) =>
                 setFormData({ ...formData, pricePerBag: e.target.value })
@@ -3781,62 +4405,65 @@ const AdminInventory = () => {
               required
             />
             <button type="submit" className="add-btn">
-              Add Product
+              Add to Stock
             </button>
           </form>
         </div>
 
-        {/* TABLE */}
+        {/* INVENTORY TABLE */}
         <div className="card">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>SKU</th>
-                <th>Stock</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p._id}>
-                  <td>{p.name}</td>
-                  <td>{p.sku}</td>
-                  <td>{p.currentStock}</td>
-                  <td>Rs. {p.pricePerBag}</td>
-                  <td>
-                    <span className={getStockStatus(p.currentStock).class}>
-                      {getStockStatus(p.currentStock).label}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="action-btn edit"
-                      onClick={() => openEditModal(p)}
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      className="action-btn delete"
-                      onClick={() => handleDelete(p._id)}
-                    >
-                      <FaTrash />
-                    </button>
-                  </td>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Stock Level</th>
+                  <th>Price / Bag</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item._id}>
+                    <td style={{ fontWeight: "bold", color: "#333" }}>
+                      {item.name}
+                    </td>
+                    <td>{item.category}</td>
+                    <td>{item.quantity} Bags</td>
+                    <td>Rs. {item.pricePerBag}</td>
+                    <td>
+                      <span className={getStockStatus(item.quantity).class}>
+                        {getStockStatus(item.quantity).label}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="action-btn edit"
+                        onClick={() => {
+                          setEditingItem({ ...item, addAmount: 0 });
+                          setIsEditModalOpen(true);
+                        }}
+                      >
+                        <FaEdit /> Restock
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        {/* EDIT MODAL */}
+        {/* RESTOCK MODAL */}
         {isEditModalOpen && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
-                <h3>Edit Product</h3>
+                <h3>Restock: {editingItem.name}</h3>
                 <button
                   className="close-modal"
                   onClick={() => setIsEditModalOpen(false)}
@@ -3845,41 +4472,22 @@ const AdminInventory = () => {
                 </button>
               </div>
               <form onSubmit={handleUpdate} className="modal-form">
-                <label>Product Name</label>
-                <input
-                  type="text"
-                  value={editingProduct.name}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      name: e.target.value,
-                    })
-                  }
-                />
-                <label>Stock (Bags)</label>
+                <p>
+                  Current Stock: <strong>{editingItem.quantity}</strong> bags
+                </p>
+                <label>Add Bags:</label>
                 <input
                   type="number"
-                  value={editingProduct.currentStock}
+                  autoFocus
                   onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      currentStock: e.target.value,
-                    })
-                  }
-                />
-                <label>Price (PKR)</label>
-                <input
-                  type="number"
-                  value={editingProduct.pricePerBag}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      pricePerBag: e.target.value,
+                    setEditingItem({
+                      ...editingItem,
+                      addAmount: e.target.value,
                     })
                   }
                 />
                 <button type="submit" className="update-btn">
-                  Save Changes
+                  Confirm Restock
                 </button>
               </form>
             </div>
@@ -5398,6 +6006,155 @@ export default AdminSales;
 
 
 // ==========================================
+// FILE: src\pages\AdminShipments.jsx
+// ==========================================
+
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import AdminSidebar from "../components/AdminSidebar";
+import { API_BASE_URL } from "../config";
+import "./AdminSuppliers.css"; // Reuse existing styles
+import { FaTruck, FaCheck, FaTimes, FaClock } from "react-icons/fa";
+
+const AdminShipments = () => {
+  const [shipments, setShipments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  const config = { headers: { Authorization: `Bearer ${userInfo?.token}` } };
+
+  // 1. Fetch All Shipments
+  const fetchShipments = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/api/shipments`, config);
+      setShipments(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching shipments", err);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchShipments();
+  }, []);
+
+  // 2. Handle Approval
+  const handleStatus = async (id, newStatus, quantity, crop) => {
+    if (!window.confirm(`Are you sure you want to ${newStatus} this shipment?`))
+      return;
+
+    try {
+      await axios.put(
+        `${API_BASE_URL}/api/shipments/${id}/status`,
+        { status: newStatus },
+        config,
+      );
+
+      alert(
+        newStatus === "Approved"
+          ? `✅ Success! ${quantity} bags of ${crop} added to Inventory.`
+          : "❌ Shipment Rejected.",
+      );
+
+      fetchShipments(); // Refresh list
+    } catch (err) {
+      alert("Error updating status.");
+    }
+  };
+
+  return (
+    <div className="admin-layout">
+      <AdminSidebar />
+      <main className="admin-content">
+        <h1 className="page-title">
+          <FaTruck /> Incoming Shipments
+        </h1>
+
+        <div className="card">
+          <h3>Pending Approvals</h3>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Supplier</th>
+                  <th>Crop</th>
+                  <th>Quantity</th>
+                  <th>Date Expected</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shipments.map((item) => (
+                  <tr key={item._id}>
+                    <td>
+                      <strong>{item.supplier?.name}</strong>
+                      <br />
+                      <span style={{ fontSize: "12px", color: "#777" }}>
+                        {item.supplier?.companyName}
+                      </span>
+                    </td>
+                    <td>{item.cropType}</td>
+                    <td style={{ fontWeight: "bold", color: "#3e5235" }}>
+                      {item.quantity} Bags
+                    </td>
+                    <td>{new Date(item.expectedDate).toLocaleDateString()}</td>
+                    <td>
+                      <span
+                        className={`status-badge ${item.status.toLowerCase()}`}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                    <td>
+                      {item.status === "Pending" ? (
+                        <div style={{ display: "flex", gap: "10px" }}>
+                          <button
+                            className="ship-btn"
+                            style={{ backgroundColor: "#2e7d32" }}
+                            onClick={() =>
+                              handleStatus(
+                                item._id,
+                                "Approved",
+                                item.quantity,
+                                item.cropType,
+                              )
+                            }
+                          >
+                            <FaCheck /> Approve
+                          </button>
+                          <button
+                            className="ship-btn"
+                            style={{ backgroundColor: "#c62828" }}
+                            onClick={() => handleStatus(item._id, "Rejected")}
+                          >
+                            <FaTimes /> Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ color: "#888", fontSize: "12px" }}>
+                          Completed
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default AdminShipments;
+
+
+// ==========================================
 // FILE: src\pages\AdminSuppliers.css
 // ==========================================
 
@@ -6050,6 +6807,37 @@ export default Contact;
   background: rgba(0, 0, 0, 0.4);
   z-index: 900;
 }
+/* Add this to src/pages/CustomerDashboard.css */
+.qty-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 15px;
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.qty-selector button {
+  background: white;
+  border: 1px solid #ddd;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3e5235;
+}
+
+.qty-selector span {
+  font-weight: bold;
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
 
 
 // ==========================================
@@ -6061,245 +6849,121 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import CustomerSidebar from "../components/CustomerSidebar";
 import "./CustomerDashboard.css";
-import {
-  FaShoppingCart,
-  FaTimes,
-  FaBoxOpen,
-  FaSearch,
-  FaHistory,
-} from "react-icons/fa";
+import { API_BASE_URL } from "../config";
+import { FaWallet, FaBox, FaTruck, FaClock } from "react-icons/fa";
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalSpent: 0,
+    activeOrders: 0,
+    totalOrders: 0,
+  });
   const [userInfo, setUserInfo] = useState(null);
 
-  // --- CART STATE ---
-  const [cart, setCart] = useState([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-
-  // 1. INITIAL LOAD (Auth & Products)
   useEffect(() => {
-    const initData = async () => {
+    const fetchStats = async () => {
       const user = JSON.parse(localStorage.getItem("userInfo"));
       if (!user) {
-        navigate("/");
+        navigate("/login");
         return;
       }
       setUserInfo(user);
 
       try {
         const config = { headers: { Authorization: `Bearer ${user.token}` } };
-        // Fetch ALL inventory items
-        const { data } = await axios.get(
-          "http://localhost:5000/api/inventory",
-          config,
-        );
+        const { data } = await axios.get(`${API_BASE_URL}/api/orders`, config);
 
-        // Handle different response structures (array vs object)
-        const items = Array.isArray(data) ? data : data.items || [];
-        setProducts(items);
-        setLoading(false);
+        // Calculate Stats locally
+        const totalSpent = data.reduce(
+          (acc, curr) => acc + curr.totalAmount,
+          0,
+        );
+        const activeOrders = data.filter((o) =>
+          ["Pending", "Processing", "Shipped"].includes(o.status),
+        ).length;
+
+        setStats({
+          totalSpent,
+          activeOrders,
+          totalOrders: data.length,
+        });
       } catch (err) {
-        console.error("Error fetching market data", err);
-        setLoading(false);
+        console.error("Error fetching stats", err);
       }
     };
-    initData();
+    fetchStats();
   }, [navigate]);
-
-  // 2. CART ACTIONS
-  const addToCart = (product) => {
-    const existItem = cart.find((x) => x._id === product._id);
-    if (existItem) {
-      setCart(
-        cart.map((x) =>
-          x._id === product._id ? { ...existItem, qty: existItem.qty + 1 } : x,
-        ),
-      );
-    } else {
-      setCart([...cart, { ...product, qty: 1 }]);
-      setIsCartOpen(true); // Auto-open cart on add
-    }
-  };
-
-  const removeFromCart = (id) => {
-    setCart(cart.filter((x) => x._id !== id));
-  };
-
-  const calculateTotal = () => {
-    return cart.reduce(
-      (acc, item) => acc + item.qty * (item.pricePerBag || 5000),
-      0,
-    );
-  };
-
-  // 3. CHECKOUT HANDLER (Connects to Backend)
-  const handleCheckout = async () => {
-    if (cart.length === 0) return;
-
-    try {
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-
-      const orderPayload = {
-        items: cart.map((item) => ({
-          product: item._id,
-          quantity: item.qty,
-          priceAtOrder: item.pricePerBag || 5000,
-        })),
-        totalAmount: calculateTotal(),
-        shippingAddress: userInfo.address || "Default Address",
-        status: "Pending",
-      };
-
-      await axios.post(
-        "http://localhost:5000/api/orders",
-        orderPayload,
-        config,
-      );
-
-      alert("🎉 Order Placed Successfully! The Admin has been notified.");
-      setCart([]);
-      setIsCartOpen(false);
-      // Optional: Refresh order history here
-    } catch (error) {
-      console.error("Checkout Failed", error);
-      alert("Order failed. Please try again.");
-    }
-  };
 
   return (
     <div className="customer-layout">
       <CustomerSidebar />
-
       <main className="customer-content">
-        {/* TOP HEADER */}
-        <div className="dashboard-header">
-          <div>
-            <h1 className="page-title">GrainBridge Market</h1>
-            <p className="subtitle">
-              Welcome, {userInfo?.name}. Select your stock.
-            </p>
-          </div>
+        <h1 className="page-title">Welcome Back, {userInfo?.name}</h1>
+        <p className="subtitle">Here is what is happening with your account.</p>
 
-          <div className="header-actions">
-            <button className="view-orders-btn">
-              <FaHistory /> Order History
-            </button>
-            <div className="cart-trigger" onClick={() => setIsCartOpen(true)}>
-              <FaShoppingCart />
-              {cart.length > 0 && (
-                <span className="badge">
-                  {cart.reduce((a, c) => a + c.qty, 0)}
-                </span>
-              )}
+        {/* Stats Grid */}
+        <div
+          className="stats-row"
+          style={{ display: "flex", gap: "20px", marginTop: "30px" }}
+        >
+          <div
+            className="stat-card"
+            style={{ borderLeft: "5px solid #2e7d32" }}
+          >
+            <FaWallet
+              className="stat-icon"
+              style={{ color: "#2e7d32", fontSize: "30px" }}
+            />
+            <div className="stat-info">
+              <p>Total Spent</p>
+              <h2>Rs. {stats.totalSpent.toLocaleString()}</h2>
+            </div>
+          </div>
+          <div
+            className="stat-card"
+            style={{ borderLeft: "5px solid #f57c00" }}
+          >
+            <FaClock
+              className="stat-icon"
+              style={{ color: "#f57c00", fontSize: "30px" }}
+            />
+            <div className="stat-info">
+              <p>Active Orders</p>
+              <h2>{stats.activeOrders}</h2>
+            </div>
+          </div>
+          <div
+            className="stat-card"
+            style={{ borderLeft: "5px solid #1976d2" }}
+          >
+            <FaBox
+              className="stat-icon"
+              style={{ color: "#1976d2", fontSize: "30px" }}
+            />
+            <div className="stat-info">
+              <p>Total Orders</p>
+              <h2>{stats.totalOrders}</h2>
             </div>
           </div>
         </div>
 
-        {/* MAIN PRODUCT GRID */}
-        {loading ? (
-          <div className="loading-state">Loading fresh harvest...</div>
-        ) : (
-          <div className="product-grid">
-            {products.map((product) => (
-              <div key={product._id} className="product-card">
-                <div className="card-image">
-                  <FaBoxOpen className="product-icon" />
-                  <span className="category-badge">{product.category}</span>
-                </div>
-                <div className="card-details">
-                  <h3>{product.name}</h3>
-                  <p className="stock-status">
-                    {product.quantity > 0 ? (
-                      <span className="in-stock">
-                        In Stock: {product.quantity} Bags
-                      </span>
-                    ) : (
-                      <span className="out-stock">Out of Stock</span>
-                    )}
-                  </p>
-                  <div className="price-row">
-                    <span className="price">
-                      Rs. {product.pricePerBag || 5000}
-                    </span>
-                    <span className="unit">/ 50kg</span>
-                  </div>
-                  <button
-                    className="add-to-cart-btn"
-                    onClick={() => addToCart(product)}
-                    disabled={product.quantity <= 0}
-                  >
-                    {product.quantity > 0 ? "Add to Cart" : "Sold Out"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-
-      {/* SHOPPING CART SIDEBAR */}
-      <div className={`cart-sidebar ${isCartOpen ? "open" : ""}`}>
-        <div className="cart-header">
-          <h2>Your Cart ({cart.length})</h2>
-          <button className="close-cart" onClick={() => setIsCartOpen(false)}>
-            <FaTimes />
+        {/* Call to Action */}
+        <div
+          className="card"
+          style={{ marginTop: "30px", textAlign: "center", padding: "40px" }}
+        >
+          <h3>Need to restock?</h3>
+          <p>Our mill has fresh stock of Super Basmati available today.</p>
+          <button
+            className="checkout-btn"
+            style={{ maxWidth: "300px", margin: "20px auto" }}
+            onClick={() => navigate("/customer/order")}
+          >
+            <FaTruck /> Place New Order
           </button>
         </div>
-
-        <div className="cart-body">
-          {cart.length === 0 ? (
-            <div className="empty-cart-msg">
-              Your cart is empty. Start shopping!
-            </div>
-          ) : (
-            cart.map((item) => (
-              <div key={item._id} className="cart-item">
-                <div className="item-info">
-                  <h4>{item.name}</h4>
-                  <p>
-                    Rs. {item.pricePerBag || 5000} x {item.qty}
-                  </p>
-                </div>
-                <div className="item-actions">
-                  <span className="item-total">
-                    Rs.{" "}
-                    {(item.qty * (item.pricePerBag || 5000)).toLocaleString()}
-                  </span>
-                  <button
-                    className="remove-btn"
-                    onClick={() => removeFromCart(item._id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {cart.length > 0 && (
-          <div className="cart-footer">
-            <div className="cart-total">
-              <span>Total:</span>
-              <span>Rs. {calculateTotal().toLocaleString()}</span>
-            </div>
-            <button className="checkout-btn" onClick={handleCheckout}>
-              Confirm Order
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* OVERLAY BACKDROP */}
-      {isCartOpen && (
-        <div
-          className="cart-backdrop"
-          onClick={() => setIsCartOpen(false)}
-        ></div>
-      )}
+      </main>
     </div>
   );
 };
@@ -6617,6 +7281,319 @@ const CustomerHistory = () => {
 };
 
 export default CustomerHistory;
+
+
+// ==========================================
+// FILE: src\pages\CustomerOrder.jsx
+// ==========================================
+
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import CustomerSidebar from "../components/CustomerSidebar";
+import PaymentModal from "../components/PaymentModal"; // Import the Payment Modal
+import "./CustomerDashboard.css";
+import {
+  FaShoppingCart,
+  FaTimes,
+  FaBoxOpen,
+  FaPlus,
+  FaMinus,
+  FaHistory,
+} from "react-icons/fa";
+import { API_BASE_URL } from "../config";
+
+// Images
+import prodBasmati from "../assets/basmati.png";
+import prodBrown from "../assets/brown.png";
+import prodIrri6 from "../assets/irri-6.png";
+import prodKainat from "../assets/kainat.png";
+
+const CustomerOrder = () => {
+  const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState(null);
+  const [qtyInputs, setQtyInputs] = useState({});
+
+  // Payment State
+  const [clientSecret, setClientSecret] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Cart State
+  const [cart, setCart] = useState(() => {
+    const savedCart = localStorage.getItem("cart");
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
+
+  const getImage = (category) => {
+    const cat = category ? category.toLowerCase() : "";
+    if (cat.includes("basmati")) return prodBasmati;
+    if (cat.includes("organic") || cat.includes("brown")) return prodBrown;
+    if (cat.includes("irri") || cat.includes("economy")) return prodIrri6;
+    return prodKainat;
+  };
+
+  useEffect(() => {
+    const initData = async () => {
+      const user = JSON.parse(localStorage.getItem("userInfo"));
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      setUserInfo(user);
+
+      try {
+        const config = { headers: { Authorization: `Bearer ${user.token}` } };
+        const { data } = await axios.get(
+          `${API_BASE_URL}/api/inventory`,
+          config,
+        );
+        const items = Array.isArray(data) ? data : data.items || [];
+        setProducts(items);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching market data", err);
+        setLoading(false);
+      }
+    };
+    initData();
+  }, [navigate]);
+
+  const handleQtyChange = (id, delta) => {
+    setQtyInputs((prev) => {
+      const currentQty = prev[id] || 1;
+      const newQty = Math.max(1, currentQty + delta);
+      return { ...prev, [id]: newQty };
+    });
+  };
+
+  const addToCart = (product) => {
+    const selectedQty = qtyInputs[product._id] || 1;
+    if (selectedQty > product.quantity) {
+      alert(`Only ${product.quantity} bags available!`);
+      return;
+    }
+    const existItem = cart.find((x) => x._id === product._id);
+    if (existItem) {
+      setCart(
+        cart.map((x) =>
+          x._id === product._id
+            ? { ...existItem, qty: existItem.qty + selectedQty }
+            : x,
+        ),
+      );
+    } else {
+      setCart([...cart, { ...product, qty: selectedQty }]);
+    }
+    setIsCartOpen(true);
+    setQtyInputs((prev) => ({ ...prev, [product._id]: 1 }));
+  };
+
+  const removeFromCart = (id) => {
+    setCart(cart.filter((x) => x._id !== id));
+  };
+
+  const calculateTotal = () => {
+    return cart.reduce(
+      (acc, item) => acc + item.qty * (item.pricePerBag || 0),
+      0,
+    );
+  };
+
+  // --- STRIPE PAYMENT FLOW ---
+  const initiatePayment = async () => {
+    if (cart.length === 0) return;
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const total = calculateTotal();
+
+      const { data } = await axios.post(
+        `${API_BASE_URL}/api/payment/create-intent`,
+        { amount: total },
+        config,
+      );
+
+      setClientSecret(data.clientSecret);
+      setShowPaymentModal(true); // Open Modal
+      setIsCartOpen(false); // Close Cart
+    } catch (error) {
+      console.error(error);
+      alert("Could not initiate payment. Check server.");
+    }
+  };
+
+  const handleOrderSuccess = async () => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const orderPayload = {
+        items: cart.map((item) => ({
+          product: item._id,
+          quantity: item.qty,
+          priceAtOrder: item.pricePerBag || 0,
+        })),
+        totalAmount: calculateTotal(),
+        shippingAddress: userInfo.address || "Default Address",
+        status: "Processing", // Paid -> Processing
+      };
+
+      await axios.post(`${API_BASE_URL}/api/orders`, orderPayload, config);
+
+      alert("✅ Payment Successful! Order Placed.");
+      setCart([]);
+      localStorage.removeItem("cart");
+      setShowPaymentModal(false);
+      navigate("/customer/history");
+    } catch (error) {
+      alert("Payment charged, but order creation failed. Contact support.");
+    }
+  };
+
+  return (
+    <div className="customer-layout">
+      <CustomerSidebar />
+      <main className="customer-content">
+        <div className="dashboard-header">
+          <h1 className="page-title">
+            <FaShoppingCart /> Place New Order
+          </h1>
+          <div className="cart-trigger" onClick={() => setIsCartOpen(true)}>
+            <FaShoppingCart />
+            {cart.length > 0 && (
+              <span className="badge">
+                {cart.reduce((a, c) => a + c.qty, 0)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {loading ? (
+          <p>Loading Products...</p>
+        ) : (
+          <div className="product-grid">
+            {products.map((product) => (
+              <div key={product._id} className="product-card">
+                <div className="card-image">
+                  <img
+                    src={getImage(product.category)}
+                    alt={product.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <span className="category-badge">{product.category}</span>
+                </div>
+                <div className="card-details">
+                  <h3>{product.name}</h3>
+                  <p className="stock-status">
+                    {product.quantity > 0 ? (
+                      <span className="in-stock">
+                        In Stock: {product.quantity}
+                      </span>
+                    ) : (
+                      <span className="out-stock">Out of Stock</span>
+                    )}
+                  </p>
+                  <div className="price-row">
+                    <span className="price">Rs. {product.pricePerBag}</span>
+                    <span className="unit">/ 50kg</span>
+                  </div>
+                  <div className="qty-selector">
+                    <button onClick={() => handleQtyChange(product._id, -1)}>
+                      <FaMinus size={10} />
+                    </button>
+                    <span>{qtyInputs[product._id] || 1}</span>
+                    <button onClick={() => handleQtyChange(product._id, 1)}>
+                      <FaPlus size={10} />
+                    </button>
+                  </div>
+                  <button
+                    className="add-to-cart-btn"
+                    onClick={() => addToCart(product)}
+                    disabled={product.quantity <= 0}
+                  >
+                    {product.quantity > 0 ? "Add to Cart" : "Sold Out"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Cart Sidebar */}
+      <div className={`cart-sidebar ${isCartOpen ? "open" : ""}`}>
+        <div className="cart-header">
+          <h2>Your Cart</h2>
+          <button className="close-cart" onClick={() => setIsCartOpen(false)}>
+            <FaTimes />
+          </button>
+        </div>
+        <div className="cart-body">
+          {cart.map((item) => (
+            <div key={item._id} className="cart-item">
+              <div className="item-info">
+                <h4>{item.name}</h4>
+                <p>
+                  Rs. {item.pricePerBag} x {item.qty}
+                </p>
+              </div>
+              <div className="item-actions">
+                <span>
+                  Rs. {(item.qty * item.pricePerBag).toLocaleString()}
+                </span>
+                <button
+                  className="remove-btn"
+                  onClick={() => removeFromCart(item._id)}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {cart.length > 0 && (
+          <div className="cart-footer">
+            <div className="cart-total">
+              <span>Total:</span>
+              <span>Rs. {calculateTotal().toLocaleString()}</span>
+            </div>
+            <button className="checkout-btn" onClick={initiatePayment}>
+              Secure Checkout
+            </button>
+          </div>
+        )}
+      </div>
+
+      {isCartOpen && (
+        <div
+          className="cart-backdrop"
+          onClick={() => setIsCartOpen(false)}
+        ></div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && clientSecret && (
+        <PaymentModal
+          clientSecret={clientSecret}
+          amount={calculateTotal()}
+          onSuccess={handleOrderSuccess}
+          onCancel={() => setShowPaymentModal(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default CustomerOrder;
 
 
 // ==========================================
@@ -8487,8 +9464,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./Products.css";
 import { FaShoppingCart, FaFilter, FaExclamationCircle } from "react-icons/fa";
+import { API_BASE_URL } from "../config";
 
-// Import Images
 import prodBasmati from "../assets/basmati.png";
 import prodBrown from "../assets/brown.png";
 import prodIrri6 from "../assets/irri-6.png";
@@ -8498,20 +9475,12 @@ const Products = () => {
   const [dbProducts, setDbProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
-  const [quantities, setQuantities] = useState({});
-
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const config = {
-          headers: { Authorization: `Bearer ${userInfo?.token}` },
-        };
-        const { data } = await axios.get(
-          "http://localhost:5000/api/products",
-          config
-        );
+        // NO HEADER/CONFIG needed because we unlocked the backend!
+        const { data } = await axios.get(`${API_BASE_URL}/api/inventory`);
         setDbProducts(data);
         setLoading(false);
       } catch (err) {
@@ -8520,16 +9489,15 @@ const Products = () => {
       }
     };
     fetchProducts();
-  }, [userInfo?.token]);
+  }, []);
 
-  // Helper to match DB products with local assets
   const getImage = (category) => {
     switch (category) {
       case "Basmati":
         return prodBasmati;
-      case "Healthy":
+      case "Organic":
         return prodBrown;
-      case "Economy":
+      case "Non-Basmati":
         return prodIrri6;
       default:
         return prodKainat;
@@ -8540,29 +9508,6 @@ const Products = () => {
     filter === "All"
       ? dbProducts
       : dbProducts.filter((p) => p.category === filter);
-
-  const handleOrder = async (product) => {
-    const qty = parseInt(quantities[product._id] || 1);
-    try {
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const orderData = {
-        items: [
-          {
-            product: product._id,
-            quantity: qty,
-            priceAtOrder: product.pricePerBag,
-          },
-        ],
-        totalAmount: product.pricePerBag * qty,
-        shippingAddress: userInfo.address || "Check Profile for Address",
-      };
-      await axios.post("http://localhost:5000/api/orders", orderData, config);
-      alert("Order placed successfully!");
-      window.location.reload();
-    } catch (err) {
-      alert(err.response?.data?.message || "Order failed.");
-    }
-  };
 
   return (
     <div className="products-page">
@@ -8576,7 +9521,7 @@ const Products = () => {
           <h3>
             <FaFilter /> Categories
           </h3>
-          {["All", "Basmati", "Healthy", "Economy"].map((cat) => (
+          {["All", "Basmati", "Non-Basmati", "Organic"].map((cat) => (
             <button
               key={cat}
               className={filter === cat ? "active" : ""}
@@ -8594,10 +9539,6 @@ const Products = () => {
             <div className="empty-state">
               <FaExclamationCircle size={50} color="#ccc" />
               <h3>No products found!</h3>
-              <p>
-                Please log in as <b>Admin</b> and add products to the Inventory
-                to see them here.
-              </p>
             </div>
           ) : (
             filteredProducts.map((product) => (
@@ -8606,34 +9547,17 @@ const Products = () => {
                 <div className="shop-card-body">
                   <span className="category-badge">{product.category}</span>
                   <h3>{product.name}</h3>
-                  <p className="stock-info">
-                    Stock: {product.currentStock} Bags
-                  </p>
-                  <div className="qty-input-group">
-                    <label>Qty:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      defaultValue="1"
-                      onChange={(e) =>
-                        setQuantities({
-                          ...quantities,
-                          [product._id]: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
+                  <p className="stock-info">Stock: {product.quantity} Bags</p>
+
                   <div className="shop-footer">
                     <span className="shop-price">
                       Rs. {product.pricePerBag}
                     </span>
                     <button
                       className="add-btn"
-                      onClick={() => handleOrder(product)}
-                      disabled={product.currentStock <= 0}
+                      onClick={() => (window.location.href = "/login")}
                     >
-                      <FaShoppingCart />{" "}
-                      {product.currentStock > 0 ? "Order" : "Out of Stock"}
+                      <FaShoppingCart /> Login to Buy
                     </button>
                   </div>
                 </div>
@@ -9740,97 +10664,249 @@ input:checked + .slider:before {
 // FILE: src\pages\SupplierDashboard.jsx
 // ==========================================
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import SupplierSidebar from "../components/SupplierSidebar";
 import "./SupplierDashboard.css";
+import { API_BASE_URL } from "../config";
 import {
   FaCalendarAlt,
   FaMoneyBillAlt,
   FaClipboardCheck,
   FaLeaf,
   FaTractor,
-  FaSeedling,
+  FaPlus,
+  FaTimes,
 } from "react-icons/fa";
 
 const SupplierDashboard = () => {
+  const navigate = useNavigate();
+  const [shipments, setShipments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState(null);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    cropType: "Basmati",
+    quantity: "",
+    expectedDate: "",
+    notes: "",
+  });
+
+  // 1. Fetch Data
+  useEffect(() => {
+    const fetchData = async () => {
+      const user = JSON.parse(localStorage.getItem("userInfo"));
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      setUserInfo(user);
+
+      try {
+        const config = { headers: { Authorization: `Bearer ${user.token}` } };
+        const { data } = await axios.get(
+          `${API_BASE_URL}/api/shipments`,
+          config,
+        );
+        setShipments(data);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching shipments", err);
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [navigate]);
+
+  // 2. Submit New Shipment
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.post(`${API_BASE_URL}/api/shipments`, formData, config);
+
+      alert("Shipment Proposal Sent! Admin will review shortly.");
+      setIsModalOpen(false);
+      window.location.reload(); // Refresh to see new item
+    } catch (err) {
+      alert("Failed to create shipment. Check data.");
+    }
+  };
+
+  // Stats Calculations
+  const approvedShipments = shipments.filter((s) => s.status === "Approved");
+  // Assuming a rough rate of Rs. 5000 per bag for estimation
+  const estimatedEarnings = approvedShipments.reduce(
+    (acc, curr) => acc + curr.quantity * 5000,
+    0,
+  );
+
   return (
     <div className="supplier-layout">
       <SupplierSidebar />
 
       <main className="supplier-content">
-        <h1 className="page-title">Welcome, Farmer Nasir Khan!</h1>
+        <h1 className="page-title">Welcome, Farmer {userInfo?.name}!</h1>
 
         {/* STATS ROW */}
         <div className="stats-row">
           <div className="stat-card">
             <FaCalendarAlt className="stat-icon calendar" />
             <div className="stat-info">
-              <p>Next Harvest Due</p>
-              <h2>25 Nov 2025</h2>
+              <p>Active Shipments</p>
+              <h2>{shipments.filter((s) => s.status === "Pending").length}</h2>
             </div>
           </div>
           <div className="stat-card">
             <FaMoneyBillAlt className="stat-icon money" />
             <div className="stat-info">
-              <p>Last Payment (Amount)</p>
-              <h2>Rs. 85,000</h2>
+              <p>Est. Earnings (Approved)</p>
+              <h2>Rs. {estimatedEarnings.toLocaleString()}</h2>
             </div>
           </div>
           <div className="stat-card">
             <FaClipboardCheck className="stat-icon check" />
             <div className="stat-info">
-              <p>Quality Score (Last Batch)</p>
-              <h2>9.5/10</h2>
+              <p>Completed Deliveries</p>
+              <h2>{approvedShipments.length}</h2>
             </div>
           </div>
         </div>
 
-        {/* MAIN CONTENT GRID */}
+        {/* DASHBOARD CONTENT */}
         <div className="dashboard-grid">
-          {/* Widget 1: Current GrainBridge Demand */}
+          {/* DEMAND WIDGET (Trigger for Modal) */}
           <div className="card demand-card">
             <h3>
-              <FaLeaf /> Current Demand: Super Kernel Rice
+              <FaLeaf /> Current Mill Demand
             </h3>
-            <p className="demand-qty">Required Quantity: 1,500 Bags</p>
-            <p className="demand-rate">
-              Current Purchase Rate: **Rs. 11,800/40kg**
+            <p className="demand-qty">
+              We need: <strong>Super Basmati & Kainat</strong>
             </p>
-            <button className="confirm-btn">
-              <FaTractor /> Confirm Your Harvest
+            <p className="demand-rate">Current Rate: Rs. 5,000 / bag</p>
+            <button
+              className="confirm-btn"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <FaTractor /> Create New Shipment
             </button>
           </div>
 
-          {/* Widget 2: Recent Payment Details */}
+          {/* SHIPMENT HISTORY TABLE */}
           <div className="card payment-card">
-            <h3>Recent Payment Details</h3>
-            <table className="supplier-table">
-              <thead>
-                <tr>
-                  <th>Batch ID</th>
-                  <th>Date</th>
-                  <th>Weight (kg)</th>
-                  <th>Amount (PKR)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>PBK-1020-004</td>
-                  <td>2025-10-25</td>
-                  <td>3,400 kg</td>
-                  <td>Rs. 85,000</td>
-                </tr>
-                <tr>
-                  <td>PBK-1010-003</td>
-                  <td>2025-09-15</td>
-                  <td>2,500 kg</td>
-                  <td>Rs. 62,500</td>
-                </tr>
-              </tbody>
-            </table>
+            <h3>My Shipment History</h3>
+            {loading ? (
+              <p>Loading...</p>
+            ) : (
+              <table className="supplier-table">
+                <thead>
+                  <tr>
+                    <th>Crop</th>
+                    <th>Qty (Bags)</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shipments.length === 0 ? (
+                    <tr>
+                      <td colSpan="4">No shipments yet. Start supplying!</td>
+                    </tr>
+                  ) : (
+                    shipments.map((ship) => (
+                      <tr key={ship._id}>
+                        <td>{ship.cropType}</td>
+                        <td>{ship.quantity}</td>
+                        <td>
+                          {new Date(ship.expectedDate).toLocaleDateString()}
+                        </td>
+                        <td>
+                          <span
+                            className={`status-badge ${ship.status.toLowerCase()}`}
+                          >
+                            {ship.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </main>
+
+      {/* CREATE SHIPMENT MODAL */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>
+                <FaPlus /> New Supply Proposal
+              </h3>
+              <button
+                className="close-modal"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="modal-form">
+              <label>Crop Variety</label>
+              <select
+                value={formData.cropType}
+                onChange={(e) =>
+                  setFormData({ ...formData, cropType: e.target.value })
+                }
+              >
+                <option value="Basmati">Super Basmati</option>
+                <option value="Kainat">Kainat 1121</option>
+                <option value="Irri-6">Irri-6</option>
+                <option value="Brown">Organic Brown</option>
+              </select>
+
+              <label>Quantity (Bags)</label>
+              <input
+                type="number"
+                min="1"
+                required
+                value={formData.quantity}
+                onChange={(e) =>
+                  setFormData({ ...formData, quantity: e.target.value })
+                }
+              />
+
+              <label>Expected Delivery Date</label>
+              <input
+                type="date"
+                required
+                value={formData.expectedDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, expectedDate: e.target.value })
+                }
+              />
+
+              <label>Notes (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. Harvested yesterday, dry stock"
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+              />
+
+              <button type="submit" className="update-btn">
+                Submit Proposal
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -10023,6 +11099,98 @@ export default SupplierDashboard;
   .urgency-tag {
     margin: 5px auto;
   }
+}
+/* --- STATUS BADGES --- */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.status-badge.pending {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.status-badge.approved {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.rejected {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+/* --- MODAL STYLES (Reused from Admin but ensured here) --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #888;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.modal-form input,
+.modal-form select {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.update-btn {
+  background-color: #3e5235;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.update-btn:hover {
+  background-color: #2c3e26;
 }
 
 

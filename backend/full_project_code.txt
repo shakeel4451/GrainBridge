@@ -406,9 +406,8 @@ module.exports = {
 // FILE: controllers\orderController.js
 // ==========================================
 
-// 1. Correct Imports (Must match your file names)
 const Order = require("../models/orderModel");
-const Inventory = require("../models/inventoryModel"); // Changed from Product to Inventory
+const Inventory = require("../models/inventoryModel");
 
 // @desc    Get orders (Admin sees all, Customer sees theirs)
 // @route   GET /api/orders
@@ -422,7 +421,8 @@ const getOrders = async (req, res) => {
     }
 
     const orders = await Order.find(query)
-      .populate("customer", "name email")
+      .populate("customer", "name email") // Show customer details
+      .populate("items.product", "name category") // Show product details
       .sort("-createdAt");
 
     res.status(200).json(orders);
@@ -453,7 +453,6 @@ const createOrder = async (req, res) => {
           .json({ message: `Product not found ID: ${item.product}` });
       }
 
-      // FIX: Use 'quantity' (from your DB), not 'currentStock'
       if (product.quantity < item.quantity) {
         return res.status(400).json({
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}`,
@@ -473,7 +472,7 @@ const createOrder = async (req, res) => {
     // 3. Deduct stock from Inventory
     for (const item of items) {
       await Inventory.findByIdAndUpdate(item.product, {
-        $inc: { quantity: -item.quantity }, // FIX: Using 'quantity'
+        $inc: { quantity: -item.quantity },
       });
     }
 
@@ -505,7 +504,6 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-// IMPORTANT: This export structure matches your routes
 module.exports = {
   getOrders,
   createOrder,
@@ -514,73 +512,128 @@ module.exports = {
 
 
 // ==========================================
-// FILE: controllers\productController.js
+// FILE: controllers\paymentController.js
 // ==========================================
 
-// backend/controllers/productController.js
+// backend/controllers/paymentController.js
+// PASTE YOUR SECRET KEY INSIDE THE QUOTES BELOW (e.g., "sk_test_51Mz...")
+const stripe = require("stripe")(
+  "sk_test_51SttKxRFoOUzByp8RjSpJ62vUgUACYxXf0JVDrr5L33atm4AdKIhLQiu3MZKlj7Nras8AKMuyaukGGkt0zRE09W200BwNOAL7p",
+);
 
-const Product = require("../models/Product");
+const createPaymentIntent = async (req, res) => {
+  const { amount } = req.body;
 
-// @desc    Get all products
-// @route   GET /api/products
-// @access  Private/Admin, Supplier
-exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find({});
-    res.status(200).json(products);
-  } catch (error) {
-    res.status(500).json({ message: "Server error fetching products" });
-  }
-};
-
-// @desc    Create a new product
-// @route   POST /api/products
-// @access  Private/Admin
-exports.createProduct = async (req, res) => {
-  try {
-    const product = await Product.create(req.body);
-    res.status(201).json(product);
-  } catch (error) {
-    res.status(400).json({ message: "Invalid product data" });
-  }
-};
-
-// @desc    Update a product
-// @route   PUT /api/products/:id
-// @access  Private/Admin
-exports.updateProduct = async (req, res) => {
-  try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount * 100, // Stripe calculates in "cents/paisa" (multiply by 100)
+      currency: "pkr", // Pakistan Rupee
+      payment_method_types: ["card"],
     });
 
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    res.status(200).json(product);
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
   } catch (error) {
-    res.status(400).json({ message: "Invalid update data" });
+    res.status(500).json({ error: error.message });
   }
 };
-// Add deleteProduct and getProductById as needed
-// @desc    Delete a product
-// @route   DELETE /api/products/:id
-// @access  Private/Admin
-exports.deleteProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
 
-    if (product) {
-      await product.deleteOne();
-      res.json({ message: "Product removed" });
-    } else {
-      res.status(404).json({ message: "Product not found" });
-    }
+module.exports = { createPaymentIntent };
+
+
+// ==========================================
+// FILE: controllers\shipmentController.js
+// ==========================================
+
+const Shipment = require("../models/shipmentModel");
+const Inventory = require("../models/inventoryModel");
+
+// @desc    Create new shipment (Supplier)
+// @route   POST /api/shipments
+const createShipment = async (req, res) => {
+  try {
+    const { cropType, quantity, expectedDate, notes } = req.body;
+
+    const shipment = await Shipment.create({
+      supplier: req.user._id,
+      cropType,
+      quantity,
+      expectedDate,
+      notes,
+      status: "Pending",
+    });
+
+    res.status(201).json(shipment);
   } catch (error) {
-    res.status(500).json({ message: "Server error during deletion" });
+    res.status(400).json({ message: "Invalid shipment data" });
   }
 };
+
+// @desc    Get shipments (Supplier sees theirs, Admin sees all)
+// @route   GET /api/shipments
+const getShipments = async (req, res) => {
+  try {
+    let query = {};
+    if (req.user.role !== "Admin") {
+      query = { supplier: req.user._id };
+    }
+
+    const shipments = await Shipment.find(query)
+      .populate("supplier", "name companyName")
+      .sort("-createdAt");
+
+    res.json(shipments);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching shipments" });
+  }
+};
+
+// @desc    Update Status & Add to Inventory (Admin)
+// @route   PUT /api/shipments/:id/status
+const updateShipmentStatus = async (req, res) => {
+  const { status } = req.body;
+
+  try {
+    const shipment = await Shipment.findById(req.params.id);
+
+    if (!shipment) {
+      return res.status(404).json({ message: "Shipment not found" });
+    }
+
+    // Prevent double approval
+    if (shipment.status === "Approved") {
+      return res.status(400).json({ message: "Already approved" });
+    }
+
+    shipment.status = status;
+    await shipment.save();
+
+    // --- MAGICAL STEP: INCREASE INVENTORY ---
+    if (status === "Approved") {
+      // Find matching inventory item (e.g., "Super Basmati" for "Basmati" crop)
+      // This is a simple fuzzy search logic
+      const inventoryItem = await Inventory.findOne({
+        category: { $regex: shipment.cropType, $options: "i" },
+      });
+
+      if (inventoryItem) {
+        inventoryItem.quantity += shipment.quantity;
+        await inventoryItem.save();
+      } else {
+        // Optional: Create new if doesn't exist (Skipped for safety)
+        console.log("No matching inventory category found, stock not added.");
+      }
+    }
+
+    res.json(shipment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Update failed" });
+  }
+};
+
+module.exports = { createShipment, getShipments, updateShipmentStatus };
 
 
 // ==========================================
@@ -645,13 +698,16 @@ const mongoose = require("mongoose");
 const inventorySchema = mongoose.Schema(
   {
     name: { type: String, required: true },
-    quantity: { type: Number, required: true },
     category: { type: String, required: true },
+    quantity: { type: Number, required: true, min: 0 }, // Ensure stock doesn't go negative
+
+    // --- ADDED THESE TWO FIELDS ---
+    pricePerBag: { type: Number, required: true, default: 0 },
+    supplier: { type: String, required: false },
   },
   { timestamps: true },
 );
 
-const Inventory = mongoose.model("Inventory", inventorySchema);
 module.exports =
   mongoose.models.Inventory || mongoose.model("Inventory", inventorySchema);
 
@@ -762,41 +818,46 @@ module.exports = mongoose.models.Order || mongoose.model("Order", orderSchema);
 
 
 // ==========================================
-// FILE: models\Product.js
+// FILE: models\shipmentModel.js
 // ==========================================
 
 const mongoose = require("mongoose");
 
-const productSchema = new mongoose.Schema(
+const shipmentSchema = mongoose.Schema(
   {
-    name: { 
-        type: String, 
-        required: true 
+    supplier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    sku: { 
-        type: String, 
-        required: true, 
-        unique: true 
+    cropType: {
+      type: String,
+      required: true,
+      enum: ["Basmati", "Kainat", "Irri-6", "Sella", "Brown"], // Matches your Inventory Categories roughly
     },
-    category: { 
-        type: String, 
-        required: true,
-        enum: ["Basmati", "Healthy", "Economy", "Sella", "Kainat"] // Added allowed categories
+    quantity: {
+      type: Number,
+      required: true,
     },
-    currentStock: { 
-        type: Number, 
-        required: true, 
-        default: 0 
+    expectedDate: {
+      type: Date,
+      required: true,
     },
-    pricePerBag: { 
-        type: Number, 
-        required: true 
+    status: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+      default: "Pending",
+    },
+    notes: {
+      type: String,
+      required: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-module.exports = mongoose.model("Product", productSchema);
+module.exports = mongoose.model("Shipment", shipmentSchema);
+
 
 // ==========================================
 // FILE: models\User.js
@@ -885,7 +946,8 @@ module.exports = mongoose.models.User || mongoose.model("User", UserSchema);
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.0.1"
+    "mongoose": "^9.0.1",
+    "stripe": "^20.2.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
@@ -959,23 +1021,22 @@ module.exports = router;
 const express = require("express");
 const router = express.Router();
 
-// 1. UPDATE IMPORTS: Add 'getInventory' and 'createInventoryItem'
 const {
-  getInventory, // <--- Needed for Customer Dashboard
-  createInventoryItem, // <--- Needed for Admin to add items
+  getInventory,
+  createInventoryItem,
   getStockAlerts,
   restockItem,
 } = require("../controllers/inventoryController");
 
 const { protect, restrictTo } = require("../middleware/authMiddleware");
 
-// --- 2. MAIN INVENTORY ROUTES (The Missing Part) ---
+// --- 1. MAIN INVENTORY ROUTES ---
 router
   .route("/")
-  .get(protect, getInventory) // ✅ OPEN: Customers can now see products
-  .post(protect, restrictTo(["Admin"]), createInventoryItem); // 🔒 ADMIN ONLY
+  .get(getInventory) // ✅ REMOVED 'protect'. Now Public Page can see products.
+  .post(protect, restrictTo(["Admin"]), createInventoryItem);
 
-// --- 3. ADMIN SPECIFIC ROUTES ---
+// --- 2. ADMIN SPECIFIC ROUTES ---
 router.get("/alerts", protect, restrictTo(["Admin"]), getStockAlerts);
 router.put("/:id/restock", protect, restrictTo(["Admin"]), restockItem);
 
@@ -1011,41 +1072,40 @@ module.exports = router;
 
 
 // ==========================================
-// FILE: routes\productRoutes.js
+// FILE: routes\paymentRoutes.js
 // ==========================================
 
-// backend/routes/productRoutes.js
+const express = require("express");
+const router = express.Router();
+const { createPaymentIntent } = require("../controllers/paymentController");
+const { protect } = require("../middleware/authMiddleware");
+
+router.post("/create-intent", protect, createPaymentIntent);
+
+module.exports = router;
+
+
+// ==========================================
+// FILE: routes\shipmentRoutes.js
+// ==========================================
 
 const express = require("express");
+const router = express.Router();
 const {
-  getProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct, // 1. Added the delete controller import
-} = require("../controllers/productController");
+  createShipment,
+  getShipments,
+  updateShipmentStatus,
+} = require("../controllers/shipmentController");
 const { protect, restrictTo } = require("../middleware/authMiddleware");
 
-const router = express.Router();
-
-/**
- * @route   /api/products
- * @desc    Get all products or create a new one
- * @access  Private
- */
 router
   .route("/")
-  .get(protect, restrictTo(["Admin", "Supplier", "Customer"]), getProducts)
-  .post(protect, restrictTo(["Admin"]), createProduct);
+  .get(protect, getShipments) // Suppliers see own, Admin sees all
+  .post(protect, restrictTo(["Supplier"]), createShipment); // Only Supplier can post
 
-/**
- * @route   /api/products/:id
- * @desc    Update or Delete a specific product
- * @access  Private (Admin Only)
- */
 router
-  .route("/:id")
-  .put(protect, restrictTo(["Admin"]), updateProduct)
-  .delete(protect, restrictTo(["Admin"]), deleteProduct); // 2. Added the DELETE route
+  .route("/:id/status")
+  .put(protect, restrictTo(["Admin"]), updateShipmentStatus); // Only Admin approves
 
 module.exports = router;
 
@@ -1123,6 +1183,42 @@ const importData = async () => {
         category: "Feed",
         quantity: 12000,
         pricePerBag: 2500,
+        supplier: "Mill Output",
+      },
+      // --- NEW ITEMS ---
+      {
+        name: "Jasmine Rice",
+        category: "Basmati",
+        quantity: 5000,
+        pricePerBag: 5500,
+        supplier: "Import Co.",
+      },
+      {
+        name: "Parboiled Sella",
+        category: "Sella",
+        quantity: 10000,
+        pricePerBag: 4200,
+        supplier: "Golden Grains",
+      },
+      {
+        name: "Red Rice",
+        category: "Healthy",
+        quantity: 2000,
+        pricePerBag: 7000,
+        supplier: "Nature Best",
+      },
+      {
+        name: "Supreme Kernel",
+        category: "Basmati",
+        quantity: 6000,
+        pricePerBag: 5100,
+        supplier: "Supplier Alpha",
+      },
+      {
+        name: "Rice Bran",
+        category: "Feed",
+        quantity: 20000,
+        pricePerBag: 1500,
         supplier: "Mill Output",
       },
     ]);
@@ -1222,98 +1318,6 @@ if (process.argv[2] === "-d") {
 
 
 // ==========================================
-// FILE: seedProducts.js
-// ==========================================
-
-// backend/seedProducts.js
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const Product = require("./models/Product");
-
-dotenv.config();
-
-const products = [
-  {
-    name: "Premium Basmati Rice",
-    sku: "BSM-EXP-01",
-    category: "Basmati",
-    pricePerBag: 4500,
-    currentStock: 500,
-  },
-  {
-    name: "Super Kernel Basmati",
-    sku: "SKB-002",
-    category: "Basmati",
-    pricePerBag: 3800,
-    currentStock: 1200,
-  },
-  {
-    name: "Organic Brown Rice",
-    sku: "BRN-003",
-    category: "Healthy",
-    pricePerBag: 5200,
-    currentStock: 250,
-  },
-  {
-    name: "Premium Sella Rice",
-    sku: "SEL-004",
-    category: "Basmati",
-    pricePerBag: 4200,
-    currentStock: 800,
-  },
-  {
-    name: "Broken Rice (Totah)",
-    sku: "TOT-005",
-    category: "Economy",
-    pricePerBag: 2000,
-    currentStock: 1500,
-  },
-  {
-    name: "Irri-6 Economy Rice",
-    sku: "IR6-006",
-    category: "Economy",
-    pricePerBag: 1800,
-    currentStock: 5000,
-  },
-  {
-    name: "Kainat 1121",
-    sku: "KNT-007",
-    category: "Basmati",
-    pricePerBag: 4000,
-    currentStock: 600,
-  },
-  {
-    name: "Jasmine Rice",
-    sku: "JAS-008",
-    category: "Basmati",
-    pricePerBag: 4800,
-    currentStock: 300,
-  }
-];
-
-const seedDatabase = async () => {
-  try {
-    console.log("Connecting to MongoDB...");
-    await mongoose.connect(process.env.MONGO_URI);
-    
-    // Clear existing products
-    await Product.deleteMany();
-    console.log("Existing products cleared...");
-
-    // Insert new products
-    await Product.insertMany(products);
-    console.log("Database Seeded Successfully! 🌱");
-    
-    process.exit();
-  } catch (error) {
-    console.error("Error seeding database:", error);
-    process.exit(1);
-  }
-};
-
-seedDatabase();
-
-// ==========================================
 // FILE: server.js
 // ==========================================
 
@@ -1326,10 +1330,11 @@ require("dotenv").config();
 
 // --- 1. Import all Routes ---
 const authRoutes = require("./routes/authRoutes");
-const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const shipmentRoutes = require("./routes/shipmentRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -1352,10 +1357,11 @@ app.get("/", (req, res) => {
 
 // --- 2. Use Routes ---
 app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/shipments", shipmentRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
