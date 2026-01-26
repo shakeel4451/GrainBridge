@@ -27,7 +27,9 @@
   gap: 10px;
   font-size: 16px;
   font-weight: bold;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
   pointer-events: auto;
 }
 
@@ -120,6 +122,7 @@
   border-radius: 15px;
   font-size: 14px;
   line-height: 1.4;
+  white-space: pre-line;
 }
 .message.user .message-bubble {
   background: #3e5235;
