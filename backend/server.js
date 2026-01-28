@@ -1,4 +1,4 @@
-// backend/server.js (UPDATED WITH INVENTORY)
+// backend/server.js (UPDATED FOR PRODUCTION DEPLOYMENT)
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -17,9 +17,17 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// Middleware
+// --- 2. Enhanced Middleware ---
 app.use(express.json());
-app.use(cors());
+
+// IMPORTANT: Updated CORS for Production
+app.use(
+  cors({
+    origin: "*", // During testing/launch, "*" allows all. You can restrict this to your Vercel URL later.
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 
 // Database Connection
 mongoose
@@ -29,10 +37,10 @@ mongoose
 
 // Basic Route Test
 app.get("/", (req, res) => {
-  res.send("Rice ERP Backend is running!");
+  res.send("Rice ERP Backend is running on Vercel!");
 });
 
-// --- 2. Use Routes ---
+// --- 3. Use Routes ---
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/inventory", inventoryRoutes);
@@ -43,19 +51,18 @@ app.use("/api/payment", paymentRoutes);
 // Error Handling Middleware
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode);
-  res.json({
+  res.status(statusCode).json({
     message: err.message,
     stack: process.env.NODE_ENV === "production" ? null : err.stack,
   });
 });
 
-// Start the server
-
+// --- 4. Vercel & Local Execution Logic ---
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 }
 
+// Crucial for Vercel Serverless Functions
 module.exports = app;
