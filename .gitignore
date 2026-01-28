@@ -1,15 +1,29 @@
-# Ignore node_modules in any folder
-**/node_modules
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Environment Variables (CRITICAL: Ignores .env in ALL folders)
+.env
+.env.local
+**/.env
 
 # Logs
 logs
 *.log
 npm-debug.log*
-
-# Environment variables
-.env
+yarn-debug.log*
+yarn-error.log*
 
 # Build outputs
 dist
 dist-ssr
+build
+coverage/
+
+# OS System Files (Junk files)
+.DS_Store
+Thumbs.db
+
+# IDE Files (Optional but good practice)
+.vscode/
+.idea/
