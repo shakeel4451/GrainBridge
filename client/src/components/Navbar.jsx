@@ -1,27 +1,26 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom"; // <-- Import useLocation
+import { Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import logo from "../assets/logo.png";
-import { FaSignOutAlt } from "react-icons/fa"; // For Logout Icon
+import { FaLeaf } from "react-icons/fa"; // Safe logo replacement
 
 const Navbar = () => {
-  const location = useLocation(); // Get current URL path
-  // Check if the current path starts with /admin
-  const isAdminRoute = location.pathname.startsWith("/admin");
+  const location = useLocation();
 
-  // Function to handle logout (simulated for now)
-  const handleLogout = () => {
-    alert("Logging out...");
-    // In a real app: clear user token, then navigate to /login
-    // For now, we'll navigate back to the homepage
-    // window.location.href = '/login';
-  };
+  // Check if we are in ANY dashboard (Admin, Customer, or Supplier)
+  const isDashboardRoute =
+    location.pathname.includes("/dashboard") ||
+    location.pathname.includes("/admin") ||
+    location.pathname.includes("/supplier") ||
+    location.pathname.includes("/customer");
 
   return (
     <nav className="navbar">
-      {/* Brand Link always visible */}
+      {/* Brand Link */}
       <Link to="/" className="navbar-brand">
-        <img src={logo} alt="GrainBridge Logo" className="logo-img" />
+        <FaLeaf
+          className="logo-img"
+          style={{ fontSize: "32px", color: "#c5a059" }}
+        />
         <div className="brand-text">
           <span className="text-white">Grain</span>
           <span className="text-gold">Bridge</span>
@@ -30,9 +29,9 @@ const Navbar = () => {
 
       <ul className="navbar-links">
         {/* CONDITIONAL RENDERING */}
-        {!isAdminRoute ? (
+        {!isDashboardRoute ? (
           <>
-            {/* PUBLIC LINKS */}
+            {/* PUBLIC LINKS (Visible when NOT logged in) */}
             <li>
               <Link to="/">Home</Link>
             </li>
@@ -58,13 +57,9 @@ const Navbar = () => {
           </>
         ) : (
           <>
-            {/* ADMIN LINKS */}
-            <li className="admin-info">Welcome, Admin!</li>
-            <li>
-              <button onClick={handleLogout} className="logout-btn">
-                <FaSignOutAlt /> Logout
-              </button>
-            </li>
+            {/* DASHBOARD HEADER (Visible when logged in) */}
+            {/* We only show a welcome message here. Logout is handled by the Sidebar. */}
+            <li className="admin-info">Welcome Back!</li>
           </>
         )}
       </ul>
