@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 // --- Helper function to generate a JWT token ---
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: "7d", // Token expires in 7 days
+    expiresIn: "7d",
   });
 };
 
@@ -15,9 +15,32 @@ const generateToken = (id, role) => {
 // @route   POST /api/auth/register
 // @access  Public
 exports.registerUser = async (req, res) => {
-  const { name, email, password, role, companyName, phone, address } = req.body;
+  const { name, email, password, role, adminKey, companyName, phone, address } =
+    req.body;
 
   try {
+    // ---------------------------------------------------------
+    // 🔒 SECURITY CHECK: THE "GATEKEEPER" LOGIC
+    // ---------------------------------------------------------
+    if (role === "Admin") {
+      // 1. Check if the environment variable is actually set on the server
+      if (!process.env.ADMIN_SECRET_KEY) {
+        console.error("ADMIN_SECRET_KEY is missing in .env or Vercel settings");
+        return res.status(500).json({
+          message: "Server Configuration Error: Admin Secret Key is missing.",
+        });
+      }
+
+      // 2. Compare the key sent by user with the server's secret
+      // Note: We trim() whitespace to prevent accidental copy-paste errors
+      if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+        return res.status(403).json({
+          message: "SECURITY ALERT: Invalid Admin Secret Key! Access Denied.",
+        });
+      }
+    }
+    // ---------------------------------------------------------
+
     // 1. Check if user already exists
     const userExists = await User.findOne({ email });
 

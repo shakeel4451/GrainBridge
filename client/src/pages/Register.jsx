@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Register.css";
 
-import { API_BASE_URL } from "../config";
+// FIX 1: Use Vite environment variable for Vercel deployment
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -16,9 +17,10 @@ const Register = () => {
     address: "",
   });
 
+  const [adminKey, setAdminKey] = useState(""); // State for the secret key
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isRegistered, setIsRegistered] = useState(false); // Success state
+  const [isRegistered, setIsRegistered] = useState(false);
   const navigate = useNavigate();
 
   const { name, email, password, role, companyName, phone, address } = formData;
@@ -33,11 +35,18 @@ const Register = () => {
     setLoading(true);
 
     try {
-      await axios.post(`${API_BASE_URL}/api/auth/register`, formData);
+      // FIX 2: Send the adminKey only if the user is trying to be an Admin
+      const payload = {
+        ...formData,
+        adminKey: role === "Admin" ? adminKey : undefined,
+      };
+
+      await axios.post(`${API_BASE_URL}/api/auth/register`, payload);
 
       setIsRegistered(true);
 
-      setTimeout(() => navigate("/login"), 4000);
+      // Redirect to login after 3 seconds
+      setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
       setError(
         err.response?.data?.message || "Registration failed. Please try again.",
@@ -55,14 +64,14 @@ const Register = () => {
           <h2 style={{ color: "#3e5235" }}>Account Created!</h2>
           <p>
             Registration was successful. You are being redirected to the login
-            page to sign in.
+            page...
           </p>
           <button
             className="register-button"
             onClick={() => navigate("/login")}
             style={{ marginTop: "20px" }}
           >
-            Go to Login
+            Go to Login Now
           </button>
         </div>
       </div>
@@ -76,6 +85,7 @@ const Register = () => {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          {/* Role Selection */}
           <div className="input-group">
             <label>I am a:</label>
             <select name="role" value={role} onChange={handleChange}>
@@ -85,6 +95,49 @@ const Register = () => {
             </select>
           </div>
 
+          {/* FIX 3: THE SECURITY VAULT UI (Only shows for Admin) */}
+          {role === "Admin" && (
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "15px",
+                backgroundColor: "#fff5f5",
+                border: "2px dashed #e53e3e",
+                borderRadius: "8px",
+              }}
+            >
+              <label
+                style={{
+                  color: "#e53e3e",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  marginBottom: "8px",
+                }}
+              >
+                <span>🔒</span> Security Clearance
+              </label>
+              <input
+                type="password"
+                placeholder="Enter Admin Secret Key"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  border: "1px solid #e53e3e",
+                  borderRadius: "4px",
+                }}
+              />
+              <small style={{ color: "#c53030", fontSize: "12px" }}>
+                * Incorrect key will block registration.
+              </small>
+            </div>
+          )}
+
+          {/* Standard Fields */}
           <div className="input-group">
             <label>Full Name</label>
             <input
@@ -118,6 +171,7 @@ const Register = () => {
             />
           </div>
 
+          {/* Extra Fields for Non-Admins */}
           {role !== "Admin" && (
             <>
               <div className="input-group">
