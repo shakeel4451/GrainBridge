@@ -1,8 +1,8 @@
-// Deployment Test 1
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import { FaLeaf } from "react-icons/fa"; // Safe logo replacement
+// Import the logo image from your assets folder
+import logo from "../assets/logo.png";
 
 const Navbar = () => {
   const location = useLocation();
@@ -18,10 +18,20 @@ const Navbar = () => {
     <nav className="navbar">
       {/* Brand Link */}
       <Link to="/" className="navbar-brand">
-        <FaLeaf
+        {/* LOGO IMAGE RESTORED */}
+        <img
+          src={logo}
+          alt="GrainBridge Logo"
           className="logo-img"
-          style={{ fontSize: "32px", color: "#c5a059" }}
+          style={{
+            height: "45px", // Adjust height to fit navbar
+            width: "auto", // Maintains aspect ratio
+            marginRight: "10px", // Space between logo and text
+            objectFit: "contain",
+          }}
         />
+
+        {/* Brand Text (You can remove this div if your logo image already has text) */}
         <div className="brand-text">
           <span className="text-white">Grain</span>
           <span className="text-gold">Bridge</span>
